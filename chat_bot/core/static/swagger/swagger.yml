@@ -1,0 +1,19 @@
+openapi: 3.0.2
+info:
+  title: 'CML - API'
+  version: '1'
+tags:
+  - name: Auth
+    description: Endpoints for ChatBot API login.
+  - name: User
+    description: Endpoints for ChatBot API user management.
+  - name: Model
+    description: Endpoints for Chatbot API model train and monitor.
+  - name: Search
+    description: Endpoint for sending a sentence for NLP model.
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

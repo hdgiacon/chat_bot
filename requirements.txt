@@ -1,0 +1,10 @@
+python-decouple
+
+django
+djangorestframework
+djangorestframework-simplejwt
+
+psycopg2-binary
+
+celery 
+redis

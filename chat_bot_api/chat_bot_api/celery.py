@@ -4,7 +4,7 @@ from celery import Celery
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'cml_api.settings')
 
-app = Celery('chat_bot')
+app = Celery('chat_bot_api')
 
 app.config_from_object('django.conf:settings', namespace='CELERY')
 

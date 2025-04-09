@@ -1,0 +1,322 @@
+openapi: 3.0.2
+
+info:
+  title: 'Chat Bot - API'
+  version: '1'
+
+tags:
+  - name: Auth
+    description: Endpoints for ChatBot API login.
+  - name: User
+    description: Endpoints for ChatBot API CRUD
+
+paths:
+  /app_auth/login/:
+    post:
+      tags:
+        - Auth
+      summary: Login and obtain JWT token pair for authentication.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string                  
+                  example: "Username required for authentication. This field is required."
+                password:
+                  type: string
+                  example: "Password associated with the username. This field is required."
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Login successfull, JWT token pair generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                  refresh:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /app_auth/logout/:
+    post:
+      security:
+        - BearerAuth: []
+      tags:
+        - Auth
+      summary: Logout and blacklist refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh:
+                  type: string
+                  example: "Refresh token generated on login endpoint."
+      responses:
+        '204':
+          description: Successfully logged out
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      
+  /app_auth/token/refresh/:
+    post:
+      tags:
+        - Auth
+      summary: Refresh JWT token for new Access Token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refresh:
+                  type: string
+                  example: "Refresh token generated on login endpoint."
+      responses:
+        '200':
+          description: New JWT token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /user/list/users/:
+    get:
+      summary: List all users present on database
+      operationId: listUsers
+      tags:
+        - User
+      responses:
+        '200':
+          description: user list fetched successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - BearerAuth: []
+
+  /user/create/:
+    post:
+      summary: Create a new user on database
+      operationId: createUser
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUser'
+      responses:
+        '201':
+          description: User created sucessfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /user/{id}/:
+    get:
+      summary: Retrieve a user by ID
+      operationId: getUser
+      tags:
+        - User
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: "user id number on database." 
+      responses:
+        '200':
+          description: user by id returned successfully. 
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - BearerAuth: []
+
+  /user/{id}/update/:
+    put:
+      summary: Update a user by ID
+      operationId: updateUser
+      tags:
+        - User
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: "user id number on database." 
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: User updated sucessfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - BearerAuth: []
+
+  /user/{id}/delete/:
+    delete:
+      summary: Delete a user by ID
+      operationId: deleteUser
+      tags:
+        - User
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: "user id number on database." 
+      responses:
+        '204':
+          description: User deleted sucessfully.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - BearerAuth: []  
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        is_staff:
+          type: boolean
+        is_active:
+          type: boolean
+
+    NewUser:
+      type: object
+      properties:
+        username:
+          type: string
+          example: "User name for register."
+        password:
+          type: string
+          example: "User password for register."
+        email:
+          type: string
+          example: "User email for register."
+        is_staff:
+          type: boolean
+          example: "if the user being registered is a staff, set it to true, if not, set it to false."
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+      Unauthorized:
+        description: The request requires user a login and authentication.
+        content:
+          application/json:
+            example:
+              error: "Authentication credentials were not provided."
+
+      NotFound:
+        description: User not found on database by passed id.
+        content:
+          application/json:
+            example:
+              error: "Not found."
+
+      ValidationError:
+        description: User validation failed, some field can be missing or has incorrect data.
+        content:
+          application/json:
+            example:
+              error: "Invalid input."
+
+      ForbiddenError:
+        description: User validated but has no permission for current functionality.
+        content:
+          application/json:
+            example:
+              error: "No permission."
+
+      InternalError:
+        description: Server internal error, please see the saved log on LogSystem table at the database.
+        content:
+          application/json:
+            example:
+              error: "Internal error."

@@ -11,5 +11,7 @@ urlpatterns = [
          extra_context = {'schema_url': 'openapi-schema'}
       ),    
       name = 'documentation'
-   )
+   ),
+   path('app_auth/', include('app_auth.urls')),
+   path('user/', include('user.urls'))
 ]

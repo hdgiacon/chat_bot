@@ -1,14 +1,16 @@
 openapi: 3.0.2
 
 info:
-  title: 'Chat Bot - API'
-  version: '1'
+  title: "Chat Bot - API"
+  version: "1"
 
 tags:
   - name: Auth
     description: Endpoints for ChatBot API login.
   - name: User
-    description: Endpoints for ChatBot API CRUD
+    description: Endpoints for ChatBot API CRUD.
+  - name: Model
+    description: Endpoints for ChatBot API model train and monitor.
 
 paths:
   /app_auth/login/:
@@ -24,7 +26,7 @@ paths:
               type: object
               properties:
                 username:
-                  type: string                  
+                  type: string
                   example: "Username required for authentication. This field is required."
                 password:
                   type: string
@@ -33,7 +35,7 @@ paths:
                 - username
                 - password
       responses:
-        '200':
+        "200":
           description: Login successfull, JWT token pair generated
           content:
             application/json:
@@ -44,10 +46,10 @@ paths:
                     type: string
                   refresh:
                     type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /app_auth/logout/:
     post:
@@ -67,13 +69,13 @@ paths:
                   type: string
                   example: "Refresh token generated on login endpoint."
       responses:
-        '204':
+        "204":
           description: Successfully logged out
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '500':
-          $ref: '#/components/responses/InternalError'
-      
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /app_auth/token/refresh/:
     post:
       tags:
@@ -90,7 +92,7 @@ paths:
                   type: string
                   example: "Refresh token generated on login endpoint."
       responses:
-        '200':
+        "200":
           description: New JWT token generated
           content:
             application/json:
@@ -99,8 +101,8 @@ paths:
                 properties:
                   access:
                     type: string
-        '401':
-          $ref: '#/components/responses/Unauthorized'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   /user/list/users/:
     get:
@@ -109,20 +111,20 @@ paths:
       tags:
         - User
       responses:
-        '200':
+        "200":
           description: user list fetched successfully.
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '500':
-          $ref: '#/components/responses/InternalError'
+                  $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalError"
       security:
         - BearerAuth: []
 
@@ -137,18 +139,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NewUser'
+              $ref: "#/components/schemas/NewUser"
       responses:
-        '201':
+        "201":
           description: User created sucessfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalError'
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   /user/{id}/:
     get:
@@ -162,22 +164,22 @@ paths:
           required: true
           schema:
             type: integer
-            example: "user id number on database." 
+            example: "user id number on database."
       responses:
-        '200':
-          description: user by id returned successfully. 
+        "200":
+          description: user by id returned successfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '500':
-          $ref: '#/components/responses/InternalError'
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalError"
       security:
         - BearerAuth: []
 
@@ -193,30 +195,30 @@ paths:
           required: true
           schema:
             type: integer
-            example: "user id number on database." 
+            example: "user id number on database."
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              $ref: "#/components/schemas/User"
       responses:
-        '200':
+        "200":
           description: User updated sucessfully.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '500':
-          $ref: '#/components/responses/InternalError'
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
       security:
         - BearerAuth: []
 
@@ -232,20 +234,89 @@ paths:
           required: true
           schema:
             type: integer
-            example: "user id number on database." 
+            example: "user id number on database."
       responses:
-        '204':
+        "204":
           description: User deleted sucessfully.
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/ForbiddenError'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalError'
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
       security:
-        - BearerAuth: []  
+        - BearerAuth: []
+
+  /app_model/train/model/:
+    post:
+      security:
+        - BearerAuth: []
+      summary: Start downloading HuggingFace dataset and train NLP model
+      operationId: trainModel
+      tags:
+        - Model
+      responses:
+        "201":
+          description: "Download and train started."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /app_model/monitor/training/:
+    post:
+      summary: Training model monitor
+      operationId: monitorTraining
+      tags:
+        - Model
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                task_id:
+                  type: string
+                  example: "Celery task_id returned on /models/train/model/ endpoint if the data is in the correct format"
+      responses:
+        "200":
+          description: current model training status returned successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        "404":
+          description: "No task found for this task_id."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+      security:
+        - BearerAuth: []
 
 components:
   schemas:
@@ -286,37 +357,37 @@ components:
       bearerFormat: JWT
 
   responses:
-      Unauthorized:
-        description: The request requires user a login and authentication.
-        content:
-          application/json:
-            example:
-              error: "Authentication credentials were not provided."
+    Unauthorized:
+      description: The request requires user a login and authentication.
+      content:
+        application/json:
+          example:
+            error: "Authentication credentials were not provided."
 
-      NotFound:
-        description: User not found on database by passed id.
-        content:
-          application/json:
-            example:
-              error: "Not found."
+    NotFound:
+      description: User not found on database by passed id.
+      content:
+        application/json:
+          example:
+            error: "Not found."
 
-      ValidationError:
-        description: User validation failed, some field can be missing or has incorrect data.
-        content:
-          application/json:
-            example:
-              error: "Invalid input."
+    ValidationError:
+      description: User validation failed, some field can be missing or has incorrect data.
+      content:
+        application/json:
+          example:
+            error: "Invalid input."
 
-      ForbiddenError:
-        description: User validated but has no permission for current functionality.
-        content:
-          application/json:
-            example:
-              error: "No permission."
+    ForbiddenError:
+      description: User validated but has no permission for current functionality.
+      content:
+        application/json:
+          example:
+            error: "No permission."
 
-      InternalError:
-        description: Server internal error, please see the saved log on LogSystem table at the database.
-        content:
-          application/json:
-            example:
-              error: "Internal error."
+    InternalError:
+      description: Server internal error, please see the saved log on LogSystem table at the database.
+      content:
+        application/json:
+          example:
+            error: "Internal error."

@@ -8,3 +8,12 @@ psycopg2-binary
 
 celery 
 redis
+
+datasets
+beautifulsoup4
+
+langchain 
+langchain-community 
+faiss-cpu 
+sentence-transformers
+langchain-google-genai

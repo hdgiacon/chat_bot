@@ -13,5 +13,6 @@ urlpatterns = [
       name = 'documentation'
    ),
    path('app_auth/', include('app_auth.urls')),
-   path('user/', include('user.urls'))
+   path('user/', include('user.urls')),
+   path('app_model/', include('app_model.urls'))
 ]

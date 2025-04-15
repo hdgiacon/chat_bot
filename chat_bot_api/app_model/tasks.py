@@ -7,7 +7,7 @@ from rest_framework.exceptions import ValidationError
 from celery import shared_task, states
 
 from .models import TaskStatus
-from .services import PrepareDataService, SetDocumentsOnDatabase, GenerateEmbeddings
+from .services import PrepareDataService, SetDocumentsOnDatabase, GenerateEmbeddings, GetResponseFromGemini
 from core.models import LogSystem
 
 
@@ -56,7 +56,7 @@ def set_database_and_train_data(download_dir: str):
 
         raise e
 
-    except IntegrityError:
+    except IntegrityError as e:
         LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
 
         TaskStatus.objects.filter(task_id = task_id).update(
@@ -77,5 +77,26 @@ def set_database_and_train_data(download_dir: str):
 
 
 
-def get_response_from_vector_base():
+def get_response_from_vector_base(question: str, data_base_path: str):
     ''''''
+
+    if not question:
+        raise ValidationError('no sentence provided for search.')
+
+    vector_results, gemini_answer = GetResponseFromGemini.get_answer_from_model(question, data_base_path)
+
+    formatted_results = [
+        {
+            "numero_resultado": i,
+            "conteudo": doc.page_content,
+            "similaridade": round(1 / (1 + score), 4)
+        }
+        for i, (doc, score) in enumerate(vector_results, 1)
+    ]
+
+    response_json = {
+        "resultados": formatted_results,
+        "resposta_gemini": gemini_answer.content
+    }
+
+    return response_json

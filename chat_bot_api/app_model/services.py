@@ -9,7 +9,7 @@ import torch
 from datasets import load_dataset
 
 from langchain_community.vectorstores import FAISS
-from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document as LangChainDocument
 
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -177,18 +177,25 @@ class GetResponseFromGemini:
         generate_embeddings = GenerateEmbeddings()
         embedding_model = generate_embeddings._define_embedding_model()
 
-        vectorstore = FAISS.load_local(vectorstore_path, embeddings = embedding_model)
+        vectorstore = FAISS.load_local(
+            vectorstore_path, 
+            embeddings = embedding_model, 
+            allow_dangerous_deserialization = True
+        )
         
-        results = vectorstore.similarity_search_with_score(query, k = top_k)
+        vector_results = vectorstore.similarity_search_with_score(query, k = top_k)
 
-        context = "\n\n".join([doc.page_content for doc, _ in results])
+        context = "\n\n".join([doc.page_content for doc, _ in vector_results])
 
-        return context, results
+        return context, vector_results
     
 
     @staticmethod
     def get_answer_from_model(question: str, data_base_path: str):
         ''''''
+
+        # How are threads implemented in different OSs?
+        # What is complement of Context-free languages?
 
         faiss_path = os.path.join(data_base_path, "processed", "faiss_index")
 
@@ -196,14 +203,8 @@ class GetResponseFromGemini:
 
         chain = get_response_from_gemini._define_gemini_model()
 
-        context, results = get_response_from_gemini._search_vector_base(faiss_path, question, 3)
+        context, vector_results = get_response_from_gemini._search_vector_base(faiss_path, question, 3)
 
-        resposta = chain.invoke({"context": context, "question": question})
+        gemini_answer = chain.invoke({"context": context, "question": question})
 
-        for i, (doc, score) in enumerate(results, 1):
-            print(f"\n🔹 Resultado {i}")
-            print(doc.page_content)
-            print(f"📎 Similaridade (1/métrica de distância): {1 / (1 + score):.4f}")
-
-        print("\n🤖 Gemini respondeu:")
-        print(resposta.content)
+        return vector_results, gemini_answer

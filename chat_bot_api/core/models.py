@@ -6,6 +6,6 @@ class LogSystem(models.Model):
     class Meta:
         app_label = 'core'
 
-    error = models.CharField(max_length = 255)
+    error = models.TextField()
     stacktrace = models.TextField()
     created_at = models.DateTimeField(auto_now_add = True)

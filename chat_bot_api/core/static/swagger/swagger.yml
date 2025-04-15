@@ -318,6 +318,113 @@ paths:
       security:
         - BearerAuth: []
 
+  /app_model/search/information/:
+    post:
+      security:
+        - BearerAuth: []
+      summary: Send question or sentence to obtain an answer from NLP model
+      operationId: askModel
+      tags:
+        - Search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                prompt:
+                  type: string
+                  example: "Which is the best programming language?"
+      responses:
+        '200':
+          description: query on trained model returned successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result_1:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      content:
+                        type: string
+                      url:
+                        type: string
+                      similarity:
+                        type: int
+                      revoked:
+                        type: string
+                  result_2:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      content:
+                        type: string
+                      url:
+                        type: string
+                      similarity:
+                        type: int
+                      revoked:
+                        type: string
+                  result_3:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      content:
+                        type: string
+                      url:
+                        type: string
+                      similarity:
+                        type: int
+                      revoked:
+                        type: string
+              example:
+                result_1:
+                  title: "Example Title 1"
+                  content: "This is some example content for result 1."
+                  url: "https://example.com/1"
+                  similarity: 0.5700613555953692
+                result_2:
+                  title: "Example Title 2"
+                  content: "This is some example content for result 2."
+                  url: "https://example.com/2"
+                  similarity: 0.33197371310011686
+                result_3:
+                  title: "Example Title 3"
+                  content: "This is some example content for result 3."
+                  url: "https://example.com/3"
+                  similarity: 0.2817058248812313
+                  revoed: "Revogado"
+        '400':
+          description: "Requisition error. No sentence provided."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '404':
+          description: "Requisition error. Model and/or embeddings not created."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        '401':
+            $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 components:
   schemas:
     User:

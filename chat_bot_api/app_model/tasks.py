@@ -82,7 +82,14 @@ def get_response_from_vector_base(question: str, data_base_path: str):
 
     if not question:
         raise ValidationError('no sentence provided for search.')
+    
+    # TODO: modelo gemini que vai analisar se a mensagem do usuário é uma duvida a se consultar no banco ou se é tipo uma mensagem de bom dia
 
+    # se for algo como uma mensagem de bom dia, não se deve consultar no banco
+
+    #first_analisys = GetResponseFromGemini.gemini_pre_analisys(question)
+
+    #if first_analisys == 'consult_vector_base':
     vector_results, gemini_answer = GetResponseFromGemini.get_answer_from_model(question, data_base_path)
 
     formatted_results = [
@@ -94,9 +101,14 @@ def get_response_from_vector_base(question: str, data_base_path: str):
         for i, (doc, score) in enumerate(vector_results, 1)
     ]
 
-    response_json = {
-        "resultados": formatted_results,
-        "resposta_gemini": gemini_answer.content
-    }
+    response_string = ""
 
-    return response_json
+    response_string += "\n🤖 Gemini: "
+    response_string += gemini_answer.content + "\n\n"
+    response_string += "Utilizei esses resultados como referência:"
+
+    for i, result in enumerate(formatted_results, 1):
+        response_string += f"\n\n🔹 {i}) {result['conteudo']}\n"
+        response_string += f"\n📎 Similaridade: {result['similaridade']:.4f}\n"
+
+    return response_string

@@ -78,13 +78,16 @@ class TrainTaskStatusView(APIView):
             task_status = TaskStatus.objects.filter(task_id = request.data.get('task_id')).first()
             
             if task_status:
-                return Response({
-                    'task_id': task_status.task_id,
-                    'status': task_status.status,
-                    'result': task_status.result,
-                    'created_at': task_status.created_at,
-                    'updated_at': task_status.updated_at,
-                })
+                return Response(
+                    {
+                        'task_id': task_status.task_id,
+                        'status': task_status.status,
+                        'result': task_status.result,
+                        'created_at': task_status.created_at,
+                        'updated_at': task_status.updated_at,
+                    }, 
+                    status = status.HTTP_200_OK
+                )
             
             else:
                 raise ValidationError('No task found for this task_id.')
@@ -129,9 +132,9 @@ class SearchInformationView(APIView):
         try:
             question = request.data.get('prompt', None)
 
-            response_json = get_response_from_vector_base(question, data_base_path)
+            model_response = get_response_from_vector_base(question, data_base_path)
 
-            return Response(response_json, status = status.HTTP_200_OK)
+            return Response(model_response, status = status.HTTP_200_OK)
         
         except AuthenticationFailed:
             return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)

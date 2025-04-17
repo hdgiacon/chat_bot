@@ -8,12 +8,11 @@ from bs4 import BeautifulSoup
 import torch
 from datasets import load_dataset
 
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain.docstore.document import Document as LangChainDocument
-
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from .models import Document
 
@@ -156,18 +155,18 @@ class GetResponseFromGemini:
         # for non static methods
         pass
 
-    def _define_gemini_model(self, model = "gemini-1.5-flash", temperature = 0.3):
+    def _define_gemini_model(self, model = "gemini-1.5-flash", temperature = 0.3, prompt_template = ""):
         ''''''
         
         os.environ["GOOGLE_API_KEY"] = config("GOOGLE_API_KEY")
 
         llm = ChatGoogleGenerativeAI(model = model, temperature = temperature)
 
-        prompt_template = PromptTemplate.from_template(
-            "Você é um assistente útil. Com base no seguinte conteúdo recuperado do banco de dados:\n\n{context}\n\nResponda a pergunta do usuário de forma clara e natural:\n\nPergunta: {question}"
+        gemini_prompt = PromptTemplate.from_template(
+            prompt_template
         )
 
-        chain = prompt_template | llm
+        chain = gemini_prompt | llm
 
         return chain
     
@@ -191,17 +190,35 @@ class GetResponseFromGemini:
     
 
     @staticmethod
+    def gemini_pre_analisys(question: str):
+        ''''''
+
+        prompt_template = ""
+
+        get_response_from_gemini = GetResponseFromGemini()
+
+        chain = get_response_from_gemini._define_gemini_model(prompt_template = prompt_template)
+
+        gemini_answer = chain.invoke({"context": context, "question": question})
+
+        return gemini_answer
+
+
+
+    @staticmethod
     def get_answer_from_model(question: str, data_base_path: str):
         ''''''
 
         # How are threads implemented in different OSs?
         # What is complement of Context-free languages?
 
+        prompt_template = "Você é um assistente útil. Com base no seguinte conteúdo recuperado do banco de dados:\n\n{context}\n\nResponda a pergunta do usuário de forma clara e natural:\n\nPergunta: {question}"
+
         faiss_path = os.path.join(data_base_path, "processed", "faiss_index")
 
         get_response_from_gemini = GetResponseFromGemini()
 
-        chain = get_response_from_gemini._define_gemini_model()
+        chain = get_response_from_gemini._define_gemini_model(prompt_template = prompt_template)
 
         context, vector_results = get_response_from_gemini._search_vector_base(faiss_path, question, 3)
 

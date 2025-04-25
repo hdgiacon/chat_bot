@@ -46,7 +46,7 @@ def login(username, password):
             st.session_state.refresh_token = data["refresh"]
             
             # Redireciona para o chatbot (lembre que o nome do arquivo deve ser igual ao mostrado no Streamlit)
-            st.switch_page("pages/chatbot.py")  # se estiver na pasta 'pages'
+            st.switch_page("pages/chatbot.py") # se estiver na pasta 'pages'
 
         else:
             st.error("Usuário ou senha incorretos.")

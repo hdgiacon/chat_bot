@@ -1,4 +1,15 @@
+# Initial data processing
+
+pandas
+
+
+# Env and HTML processing
+
 python-decouple
+beautifulsoup4
+
+
+# REST API and Backend
 
 django
 djangorestframework
@@ -9,8 +20,10 @@ psycopg2-binary
 celery 
 redis
 
+
+# Natural Processing Language
+
 datasets
-beautifulsoup4
 
 langchain 
 langchain-community 
@@ -18,6 +31,9 @@ langchain-huggingface
 faiss-cpu 
 sentence-transformers
 langchain-google-genai
+
+
+# Frontend
 
 streamlit
 streamlit-autorefresh

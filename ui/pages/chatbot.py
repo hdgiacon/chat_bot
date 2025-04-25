@@ -5,10 +5,10 @@ import streamlit as st
 from streamlit_autorefresh import st_autorefresh
 
 
-
 def get_profile_image(role):
     if role == "user":
         return "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+    
     else:
         return "https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
 
@@ -20,7 +20,8 @@ def update_chat():
             profile_img = get_profile_image(role)
 
             if content.startswith("<div"): 
-                st.markdown(content, unsafe_allow_html=True)
+                st.markdown(content, unsafe_allow_html = True)
+            
             else:
                 if role == "user":
                     st.markdown(f'''
@@ -30,7 +31,8 @@ def update_chat():
                             </div>
                             <img class="profile-img" src="{profile_img}" alt="{role}">
                         </div>
-                    ''', unsafe_allow_html=True)
+                    ''', unsafe_allow_html = True)
+                
                 else:
                     st.markdown(f'''
                         <div class="message-container" style="justify-content: flex-start;">
@@ -39,14 +41,14 @@ def update_chat():
                                 <div class="message-content">{content}</div>
                             </div>
                         </div>
-                    ''', unsafe_allow_html=True)
+                    ''', unsafe_allow_html = True)
 
 
 
 def check_pipeline_ready():
     project_root = Path(__file__).resolve().parent.parent.parent
     base_path = project_root / "data"
-      # ajuste para o caminho real
+    
     required_files = [
         base_path / "processed/faiss_index/index.pkl",
         base_path / "processed/faiss_index/index.faiss",
@@ -68,6 +70,7 @@ def start_pipeline():
         
         if response.status_code == 201:
             task_id = response.json().get("task_id")
+            
             if task_id:
                 st.session_state["task_id"] = task_id
                 
@@ -82,8 +85,9 @@ def start_pipeline():
 def check_pipeline_status():
     try:
         task_id = st.session_state.get("task_id", None)
+        
         if not task_id:
-            return "Task ID não encontrado"
+            return {"status": "ERROR", "result": "Task ID não encontrado"}
 
         token = st.session_state.get("access_token", None)
         headers = {"Authorization": f"Bearer {token}"} if token else {}
@@ -93,12 +97,13 @@ def check_pipeline_status():
         response = requests.post("http://localhost:8000/app_model/monitor/training/", json = data, headers = headers)
 
         if response.status_code == 200:
-            return response.json().get("status", "Verificando...")
+            return response.json()
 
-        return "Erro ao consultar status"
+        return {"status": "ERROR", "result": "Erro ao consultar status"}
     
     except Exception as e:
-        return f"Erro ao conectar ao servidor: {str(e)}"
+        return {"status": "ERROR", "result": f"Erro ao conectar ao servidor: {str(e)}"}
+
 
 
 def query_model(prompt):
@@ -110,7 +115,8 @@ def query_model(prompt):
 
     if not token:
         st.error("Token de autenticação não encontrado. Faça login novamente.")
-        return "Erro de autenticação."
+        
+        return "⚠️ Erro de autenticação. Por favor, faça login novamente."
 
     headers = {
         "Authorization": f"Bearer {token}"
@@ -120,23 +126,31 @@ def query_model(prompt):
 
     try:
         response = requests.post(API_MODEL_URL, json = payload, headers = headers)
+        
         if response.status_code == 200:
             return response.json()
+        
+        elif response.status_code in [401, 403]:
+            st.warning("🔒 Sua sessão expirou. Por favor, faça login novamente.")
+
+            if st.button("🔑 Ir para Login"):
+                st.switch_page("pages/login.py")
+            
+            return "🔒 Sua sessão expirou. Por favor, faça login novamente."
+        
         else:
             st.error(f"Erro {response.status_code} ao consultar o modelo.")
+            
             return "Desculpe, não consegui entender sua pergunta."
+    
     except Exception as e:
         st.error(f"Erro ao conectar com a API: {e}")
+        
         return "Desculpe, não consegui conectar ao servidor."
+
     
-
-
-
-
-
-
-
 ###################################################################################################################
+
 
 st.title("💬 Chatbot for Stack Exchange")
 st.subheader("Inferences in Stack Exchange (SE) question-answering dataset")
@@ -256,47 +270,42 @@ message_container = st.empty()
 
 
 if not st.session_state.get("pipeline_ready", False):
-
-    st_autorefresh(interval = 15000, limit = None, key = "pipeline_refresh")
-
-    st.warning("⚠️ Os dados ainda não estão prontos para o chatbot funcionar.")
-    st.markdown("Clique no botão abaixo para iniciar o processo.")
-
+    
     if not st.session_state.get("pipeline_running", False):
         if st.button("🚀 Iniciar preparação dos dados"):
             success = start_pipeline()
+            
             if success:
                 st.session_state.pipeline_running = True
                 st.session_state.pipeline_status = "Pipeline iniciado."
                 st.session_state.last_status_check = time.time()
+            
             else:
                 st.error("Erro ao iniciar o pipeline.")
-
     else:
         now = time.time()
+        
         if now - st.session_state.last_status_check > 15:
-            status = check_pipeline_status()
-            st.session_state.pipeline_status = status
-            st.session_state.last_status_check = now
+            status_json = check_pipeline_status()
+            
+            if isinstance(status_json, str):
+                st.session_state.pipeline_status = status_json
+            
+            else:
+                result = status_json.get("result", "").lower()
+                status = status_json.get("status", "").upper()
 
-            if "Creating faiss vector base success" in status:
-                st.session_state.pipeline_ready = True
-                st.session_state.pipeline_running = False
+                st.session_state.pipeline_status = result
+                st.session_state.last_status_check = now
 
-    status = st.session_state.pipeline_status.lower()
-    progress = 0
+                if status == "SUCCESS" and "faiss vector base success" in result:
+                    st.session_state.pipeline_ready = True
+                    st.session_state.pipeline_running = False
 
-    if "download" in status:
-        progress = 0.33
-    elif "creating embeddings" in status:
-        progress = 0.66
-    elif "creating faiss vector base" in status:
-        progress = 0.95
-    elif "success" in status:
-        progress = 1.0
-
-    st.progress(progress, text = f"Status atual: {st.session_state.pipeline_status}")
-    st.stop()
+    if not st.session_state.pipeline_ready:
+        st.info(f"⏳ Status atual: {st.session_state.pipeline_status}")
+        st_autorefresh(interval = 15000, limit = None, key = "pipeline_refresh")
+        st.stop()
 
 
 
@@ -310,7 +319,7 @@ if user_input:
     thinking_html = '''
     <div class="thinking-message-container">
         <div class="thinking-bubble">
-            <span class="typing">thinking<span>.</span><span>.</span><span>.</span></span>
+            <span class="typing">thinking <span>.</span><span>.</span><span>.</span></span>
         </div>
     </div>
     '''

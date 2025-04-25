@@ -77,26 +77,32 @@ def set_database_and_train_data(download_dir: str):
 
 
 
-def get_response_from_vector_base(question: str, data_base_path: str):
+def get_response_from_vector_base(question: str, data_base_path: str) -> str:
     ''''''
+
+    LIMIAR_REJEICAO = 1.0833
 
     if not question:
         raise ValidationError('no sentence provided for search.')
     
-    # TODO: modelo gemini que vai analisar se a mensagem do usuário é uma duvida a se consultar no banco ou se é tipo uma mensagem de bom dia
+    
+    verify_greetings = GetResponseFromGemini.classify_greeting_with_gemini(question)
 
-    # se for algo como uma mensagem de bom dia, não se deve consultar no banco
-
-    #first_analisys = GetResponseFromGemini.gemini_pre_analisys(question)
-
-    #if first_analisys == 'consult_vector_base':
+    if verify_greetings != 'other':
+        return verify_greetings
+    
+    
     vector_results, gemini_answer = GetResponseFromGemini.get_answer_from_model(question, data_base_path)
+
+    if not vector_results or vector_results[0][1] > LIMIAR_REJEICAO:
+        return "Sorry, I couldn't find anything related to your question. This content may not be in my search database. Could you rephrase it?"
+
 
     formatted_results = [
         {
-            "numero_resultado": i,
-            "conteudo": doc.page_content,
-            "similaridade": round(1 / (1 + score), 4)
+            "result_number": i,
+            "content": doc.page_content,
+            "similarity": round(1 / (1 + score), 4)
         }
         for i, (doc, score) in enumerate(vector_results, 1)
     ]
@@ -105,10 +111,10 @@ def get_response_from_vector_base(question: str, data_base_path: str):
 
     response_string += "\n🤖 Gemini: "
     response_string += gemini_answer.content + "\n\n"
-    response_string += "Utilizei esses resultados como referência:"
+    response_string += "🤖 I used these results as a reference:"
 
     for i, result in enumerate(formatted_results, 1):
-        response_string += f"\n\n🔹 {i}) {result['conteudo']}\n"
-        response_string += f"\n📎 Similaridade: {result['similaridade']:.4f}\n"
+        response_string += f"\n\n🔹 {i}) {result['content']}\n"
+        response_string += f"\n📎 Similarity: {result['similarity']:.4f}\n"
 
     return response_string

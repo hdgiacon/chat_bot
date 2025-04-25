@@ -190,18 +190,35 @@ class GetResponseFromGemini:
     
 
     @staticmethod
-    def gemini_pre_analisys(question: str):
+    def classify_greeting_with_gemini(question: str) -> str:
         ''''''
 
-        prompt_template = ""
+        prompt_template = """
+            You are a greeting classifier.
+            Your job is to check if a sentence sent by a user is a greeting like "hello", "hi", "good morning", "good afternoon", "good evening", etc.
+
+            - If it is a greeting, respond with an appropriate greeting back, like "Hello!", "Good evening!", etc.
+            - If it is not a greeting, respond with just: other
+
+            Sentence: {question}
+            Answer:
+        """
 
         get_response_from_gemini = GetResponseFromGemini()
 
-        chain = get_response_from_gemini._define_gemini_model(prompt_template = prompt_template)
+        chain = get_response_from_gemini._define_gemini_model(
+            prompt_template = prompt_template, 
+            temperature = 0.7
+        )
 
-        gemini_answer = chain.invoke({"context": context, "question": question})
+        answer = chain.invoke({"question": question})
 
-        return gemini_answer
+        result = answer.content.strip().lower()
+        
+        if result != "other":
+            return result
+        else:
+            return "other"
 
 
 
@@ -212,7 +229,12 @@ class GetResponseFromGemini:
         # How are threads implemented in different OSs?
         # What is complement of Context-free languages?
 
-        prompt_template = "Você é um assistente útil. Com base no seguinte conteúdo recuperado do banco de dados:\n\n{context}\n\nResponda a pergunta do usuário de forma clara e natural:\n\nPergunta: {question}"
+        prompt_template = """
+            You are a helpful assistant. 
+            Based on the following content retrieved from the database:\n\n{context}\n\n
+            Answer the user's question clearly and naturally:\n\n
+            Question: {question}
+        """
 
         faiss_path = os.path.join(data_base_path, "processed", "faiss_index")
 

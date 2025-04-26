@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 
 import torch
 from datasets import load_dataset
+import faiss
 
 from langchain.docstore.document import Document as LangChainDocument
 from langchain.prompts import PromptTemplate
@@ -129,8 +130,10 @@ class GenerateEmbeddings:
     def _create_faiss_index(self, documents: list[LangChainDocument], embedding_model: HuggingFaceEmbeddings):
         ''''''
         
-        vectorstore = FAISS.from_documents(documents, embedding_model)
+        dimension = embedding_model.embed_query("test").shape[0]
+        index = faiss.IndexFlatL2(dimension)
         
+        vectorstore = FAISS.from_documents(documents, embedding_model, index = index)
         return vectorstore
 
     

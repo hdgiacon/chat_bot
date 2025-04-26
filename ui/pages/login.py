@@ -1,27 +1,26 @@
 import streamlit as st
 import requests
 
-API_LOGIN_URL = "http://localhost:8000/app_auth/login/"  # altere se necessário
 
+API_LOGIN_URL = "http://localhost:8000/app_auth/login/"
+API_CREATE_USER_URL = "http://localhost:8000/user/create/"
 
-# Ocultar barra lateral de navegação
 st.set_page_config(
-    page_title="Login",
-    page_icon="🔐",
-    layout="centered",
-    initial_sidebar_state="collapsed"  # Fecha a sidebar por padrão
+    page_title = "Login",
+    page_icon = "🔐",
+    layout = "centered",
+    initial_sidebar_state = "collapsed"
 )
 
-# CSS para esconder completamente a barra lateral
 hide_sidebar_style = """
     <style>
         section[data-testid="stSidebarNav"] {display: none;}
     </style>
 """
-st.markdown(hide_sidebar_style, unsafe_allow_html=True)
+
+st.markdown(hide_sidebar_style, unsafe_allow_html = True)
 
 
-# Inicializa a página
 if "page" not in st.session_state:
     st.session_state.page = "login"
 
@@ -31,29 +30,58 @@ def go_to_register():
 def go_to_login():
     st.session_state.page = "login"
 
+
+
 def login(username, password):
     payload = {
         "username": username,
         "password": password
     }
+    
     try:
-        response = requests.post(API_LOGIN_URL, json=payload)
+        response = requests.post(API_LOGIN_URL, json = payload)
+        
         if response.status_code == 200:
             data = response.json()
             
-            # Salva os tokens na sessão
             st.session_state.access_token = data["access"]
             st.session_state.refresh_token = data["refresh"]
             
-            # Redireciona para o chatbot (lembre que o nome do arquivo deve ser igual ao mostrado no Streamlit)
-            st.switch_page("pages/chatbot.py") # se estiver na pasta 'pages'
+            st.switch_page("pages/chatbot.py")
 
         else:
-            st.error("Usuário ou senha incorretos.")
+            st.error("Incorrect username or password.")
+    
     except Exception as e:
-        st.error(f"Erro ao conectar com a API: {e}")
+        st.error(f"Error connecting to API: {e}")
 
-# Estilo CSS
+def register(new_username, new_password):
+    payload = {
+        "username": new_username,
+        "password": new_password,
+        "email": "test@test.com",
+        "is_staff": True
+    }
+
+    try:
+        response = requests.post(API_CREATE_USER_URL, json = payload)
+
+        if response.status_code == 201:
+            st.session_state.page = "login"
+            st.success("User created successfully.")
+            st.rerun()
+
+        else:
+            st.error("New password not allowed.")
+
+    except Exception as e:
+        st.error(f"Error connecting to API: {e}")
+
+
+
+###################################################################################################################
+
+
 st.markdown("""
     <style>
         .login-box {
@@ -73,31 +101,41 @@ st.markdown("""
             font-size: 0.9rem;
         }
     </style>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html = True)
 
-# Interface
+
 with st.container():
-    st.markdown('<div class="login-box">', unsafe_allow_html=True)
+    st.markdown('<div class="login-box">', unsafe_allow_html = True)
 
     if st.session_state.page == "login":
         st.markdown("## 🔐 Login")
-        username = st.text_input("Usuário")
-        password = st.text_input("Senha", type="password")
-        if st.button("Entrar", use_container_width=True):
+        
+        username = st.text_input("User")
+        password = st.text_input("Password", type = "password")
+        
+        if st.button("Sign in", use_container_width = True):
             login(username, password)
-        st.button("Cadastrar", on_click=go_to_register, use_container_width=True)
+        
+        st.button("Sign up", on_click = go_to_register, use_container_width = True)
 
     elif st.session_state.page == "register":
-        st.markdown("## 📝 Cadastrar")
-        new_username = st.text_input("Novo usuário")
-        new_password = st.text_input("Nova senha", type="password")
-        st.button("Cadastrar", use_container_width=True)
-        st.button("Voltar para Login", on_click=go_to_login, use_container_width=True)
+        st.markdown("## 📝 Sign up")
+        
+        new_username = st.text_input("New user")
+        new_password = st.text_input("New password", type = "password")
+        
+        if st.button("Sign up", use_container_width = True):
+            if new_username.strip() == "" or new_password.strip() == "":
+                st.warning("Please fill in both fields.")
+            else:
+                register(new_username, new_password)
+        
+        st.button("Back to Login", on_click = go_to_login, use_container_width = True)
 
     elif st.session_state.page == "chat":
-        st.markdown("## 🤖 Bem-vindo ao Chatbot!")
-        st.success("Login realizado com sucesso.")
-        st.write("Você está autenticado. Aqui entrará a interface do chatbot.")
-        st.button("Sair", on_click=lambda: st.session_state.clear(), use_container_width=True)
+        st.markdown("## 🤖 Welcome to Chatbot!")
+        st.success("Login successfully.")
+        st.write("You are authenticated. Here you will enter the chatbot interface.")
+        st.button("Exit", on_click = lambda: st.session_state.clear(), use_container_width = True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html = True)

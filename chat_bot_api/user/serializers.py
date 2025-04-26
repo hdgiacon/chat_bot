@@ -35,7 +35,7 @@ def validate_password(password: str) -> None:
     if not re.search(r'[a-z]', password):
         raise serializers.ValidationError('Password must contain at least one lowercase letter.')
     
-    if not re.search(r'[0-9]', password):
+    if not re.search(r'\d', password):
         raise serializers.ValidationError('Password must contain at least one digit.')
     
     if not re.search(r'[\W_]', password):

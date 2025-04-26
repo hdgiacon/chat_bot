@@ -87,7 +87,7 @@ def check_pipeline_status():
         task_id = st.session_state.get("task_id", None)
         
         if not task_id:
-            return {"status": "ERROR", "result": "Task ID não encontrado"}
+            return {"status": "ERROR", "result": "Task ID not found"}
 
         token = st.session_state.get("access_token", None)
         headers = {"Authorization": f"Bearer {token}"} if token else {}
@@ -99,10 +99,10 @@ def check_pipeline_status():
         if response.status_code == 200:
             return response.json()
 
-        return {"status": "ERROR", "result": "Erro ao consultar status"}
+        return {"status": "ERROR", "result": "Error when querying status"}
     
     except Exception as e:
-        return {"status": "ERROR", "result": f"Erro ao conectar ao servidor: {str(e)}"}
+        return {"status": "ERROR", "result": f"Error connecting to server: {str(e)}"}
 
 
 
@@ -114,9 +114,9 @@ def query_model(prompt):
     token = st.session_state.get("access_token", None)
 
     if not token:
-        st.error("Token de autenticação não encontrado. Faça login novamente.")
+        st.error("Authentication token not found. Please log in again.")
         
-        return "⚠️ Erro de autenticação. Por favor, faça login novamente."
+        return "⚠️ Authentication error. Please log in again."
 
     headers = {
         "Authorization": f"Bearer {token}"
@@ -131,22 +131,61 @@ def query_model(prompt):
             return response.json()
         
         elif response.status_code in [401, 403]:
-            st.warning("🔒 Sua sessão expirou. Por favor, faça login novamente.")
+            st.warning("🔒 Your session has expired. Please log in again..")
+            st.session_state["session_expired"] = True
 
-            if st.button("🔑 Ir para Login"):
-                st.switch_page("pages/login.py")
-            
-            return "🔒 Sua sessão expirou. Por favor, faça login novamente."
+            return "🔒 Your session has expired. Please log in again.."
         
         else:
-            st.error(f"Erro {response.status_code} ao consultar o modelo.")
+            st.error(f"Error {response.status_code} when querying model.")
             
-            return "Desculpe, não consegui entender sua pergunta."
+            return "Sorry, I couldn't understand your question."
     
     except Exception as e:
-        st.error(f"Erro ao conectar com a API: {e}")
+        st.error(f"Error connecting to API: {e}")
         
-        return "Desculpe, não consegui conectar ao servidor."
+        return "Sorry, I couldn't connect to the server."
+    
+
+def logout():
+    token = st.session_state.get("access_token", None)
+
+    if not token:
+        st.error("Authentication token not found. Please log in again.")
+        
+        return "⚠️ Authentication error. Please log in again."
+
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    refresh_token = st.session_state.get("refresh_token")
+
+    if not refresh_token:
+        st.warning("No refresh token found.")
+        
+        return
+
+    payload = {"refresh": refresh_token}
+
+    try:
+        API_LOGOUT_URL = "http://localhost:8000/app_auth/logout/"
+
+        response = requests.post(API_LOGOUT_URL, json = payload, headers = headers)
+
+        if response.status_code == 204:
+            st.success("Logged out successfully.")
+            st.session_state.clear()
+            
+            st.switch_page("main.py")
+        
+        else:
+            st.error("Failed to logout. Please try again.")
+
+    except Exception as e:
+        st.error(f"Error connecting to API: {e}")
+
+
 
     
 ###################################################################################################################
@@ -247,9 +286,15 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 
-if st.button("🧹 Limpar conversa"):
-    st.session_state.messages = []
+col1, col2, _ = st.columns([3, 2, 6])
 
+with col1:
+    if st.button("🧹 Clear conversation", use_container_width = True):
+        st.session_state.messages = []
+
+with col2:
+    if st.button("🔓 Logout", use_container_width = True):
+        logout()
 
 
 if "pipeline_ready" not in st.session_state:
@@ -259,7 +304,7 @@ if "pipeline_running" not in st.session_state:
     st.session_state.pipeline_running = False
 
 if "pipeline_status" not in st.session_state:
-    st.session_state.pipeline_status = "Aguardando início..."
+    st.session_state.pipeline_status = "Waiting for start..."
 
 if "last_status_check" not in st.session_state:
     st.session_state.last_status_check = 0
@@ -272,16 +317,16 @@ message_container = st.empty()
 if not st.session_state.get("pipeline_ready", False):
     
     if not st.session_state.get("pipeline_running", False):
-        if st.button("🚀 Iniciar preparação dos dados"):
+        if st.button("🚀 Start data preparation"):
             success = start_pipeline()
             
             if success:
                 st.session_state.pipeline_running = True
-                st.session_state.pipeline_status = "Pipeline iniciado."
+                st.session_state.pipeline_status = "Pipeline started."
                 st.session_state.last_status_check = time.time()
             
             else:
-                st.error("Erro ao iniciar o pipeline.")
+                st.error("Error starting pipeline.")
     else:
         now = time.time()
         
@@ -303,13 +348,13 @@ if not st.session_state.get("pipeline_ready", False):
                     st.session_state.pipeline_running = False
 
     if not st.session_state.pipeline_ready:
-        st.info(f"⏳ Status atual: {st.session_state.pipeline_status}")
+        st.info(f"⏳ Status: {st.session_state.pipeline_status}")
         st_autorefresh(interval = 15000, limit = None, key = "pipeline_refresh")
         st.stop()
 
 
 
-user_input = st.chat_input("Digite sua mensagem")
+user_input = st.chat_input("Type your message")
 
 if user_input:
 
@@ -328,5 +373,10 @@ if user_input:
     update_chat()
 
     model_response = query_model(user_input)
+
+    # CHECA SE A SESSÃO EXPIROU
+    if st.session_state.get("session_expired", False):
+        st.switch_page("main.py")
+
     st.session_state.messages[-1] = {"role": "bot", "content": model_response}
     update_chat()

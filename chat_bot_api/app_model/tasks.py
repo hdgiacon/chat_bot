@@ -110,7 +110,8 @@ def get_response_from_vector_base(question: str, data_base_path: str) -> str:
     response_string = ""
 
     response_string += "\n🤖 Gemini: "
-    response_string += gemini_answer.content + "\n\n"
+    response_string += gemini_answer.content
+    response_string += "--------------------------------------"
     response_string += "🤖 I used these results as a reference:"
 
     for i, result in enumerate(formatted_results, 1):

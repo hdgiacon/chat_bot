@@ -7,7 +7,7 @@ from streamlit_autorefresh import st_autorefresh
 
 def get_profile_image(role):
     if role == "user":
-        return "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
+        return "https://cdn-icons-png.flaticon.com/512/11052/11052411.png"
     
     else:
         return "https://cdn-icons-png.flaticon.com/512/4712/4712109.png"
@@ -374,9 +374,24 @@ if user_input:
 
     model_response = query_model(user_input)
 
-    # CHECA SE A SESSÃO EXPIROU
+
     if st.session_state.get("session_expired", False):
         st.switch_page("main.py")
 
-    st.session_state.messages[-1] = {"role": "bot", "content": model_response}
-    update_chat()
+    # TODO: separar em duas mensagens, a resposta do Gemini das referencias
+
+    if "--------------------------------------" in model_response:
+
+        split_answer = model_response.split("--------------------------------------")
+
+        st.session_state.messages[-1] = ({"role": "bot", "content": split_answer[0]})
+        #update_chat()
+
+        time.sleep(0.5)
+
+        st.session_state.messages.append({"role": "bot", "content": split_answer[1]})
+        update_chat()
+
+    else:
+        st.session_state.messages[-1] = ({"role": "bot", "content": model_response})
+        update_chat()

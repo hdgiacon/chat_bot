@@ -28,7 +28,11 @@ The second LLM used in the project was [**sentence-transformers/all-MiniLM-L6-v2
 
 The database used was [**habedi/stack-exchange-dataset**](https://huggingface.co/datasets/habedi/stack-exchange-dataset), made available by [**habedi**](https://huggingface.co/habedi) on *HuggingFace* under the [**Creative Commons**](https://creativecommons.org/licenses/) license, which has data for questions asked in a *Stack Exchange* (SE) question answering community. The data was downloaded and saved in a *Postgre* database.
 
-[//]: <> (TODO: diagrama do projeto)
+<br>
+
+![diagram](assets/diagram.png)
+
+<br>
 
 ## Endpoints
 
@@ -86,7 +90,7 @@ For this project, the following tools were needed:
 
 * [**pandas**](https://pandas.pydata.org/) - data manipulation in tables.
 * [**beautifulsoup4**](https://pypi.org/project/beautifulsoup4/) - information extraction in HTML.
-* [**torch**](https://pytorch.org/) - Machine learning library used for applications such as computer vision and natural language processing.
+* [**torch**](https://pytorch.org/) - Deep learning library used for applications such as computer vision and natural language processing.
 * [**Sentence Transformers**](https://www.sbert.net/) - module to access, use and train text and image embedding models.
 * [**langchain**](https://www.langchain.com/) - building applications with LLM in modular architecture.
 * [**langchain-community**](https://pypi.org/project/langchain-community/) - extra community connectors and integrations for LangChain.
@@ -112,6 +116,20 @@ Creating the Python virtual environment - *venv* from the requirements.txt file.
         source ./venv/bin/activate
 
         pip install -r requirements.txt
+
+### PostGreSQL
+
+1. Install:
+
+        sudo apt install postgresql postgresql-contrib
+
+2. Check execution status:
+
+        sudo systemctl status postgresql
+
+3. If it is not running, use the following command:
+
+        sudo systemctl start postgresql
 
 ### Celery Broker - Redis
 

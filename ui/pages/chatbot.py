@@ -378,14 +378,11 @@ if user_input:
     if st.session_state.get("session_expired", False):
         st.switch_page("main.py")
 
-    # TODO: separar em duas mensagens, a resposta do Gemini das referencias
-
     if "--------------------------------------" in model_response:
 
         split_answer = model_response.split("--------------------------------------")
 
         st.session_state.messages[-1] = ({"role": "bot", "content": split_answer[0]})
-        #update_chat()
 
         time.sleep(0.5)
 

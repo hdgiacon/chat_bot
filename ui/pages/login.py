@@ -1,3 +1,5 @@
+import os
+from pathlib import Path
 import streamlit as st
 import requests
 
@@ -82,36 +84,25 @@ def register(new_username, new_password):
 ###################################################################################################################
 
 
-st.markdown("""
-    <style>
-        .login-box {
-            max-width: 400px;
-            margin: auto;
-            padding: 2rem;
-            background-color: #f1f1f1;
-            border-radius: 10px;
-        }
-        .login-box h2 {
-            text-align: center;
-            margin-bottom: 1.5rem;
-        }
-        .switch-link {
-            text-align: center;
-            margin-top: 1rem;
-            font-size: 0.9rem;
-        }
-    </style>
-""", unsafe_allow_html = True)
-
-
 with st.container():
-    st.markdown('<div class="login-box">', unsafe_allow_html = True)
+    project_root = Path(__file__).resolve().parent.parent.parent
+
+    logo_path = os.path.join(project_root, "assets","chatbot_logo.png")
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col1:
+        st.write("")
+    with col2:
+        st.image(logo_path, width = 300)
+    with col3:
+        st.write("")
 
     if st.session_state.page == "login":
         st.markdown("## 🔐 Login")
         
-        username = st.text_input("User")
-        password = st.text_input("Password", type = "password")
+        username = st.text_input("User", placeholder = "")
+        password = st.text_input("Password", type = "password", placeholder = "")
         
         if st.button("Sign in", use_container_width = True):
             login(username, password)
@@ -121,8 +112,8 @@ with st.container():
     elif st.session_state.page == "register":
         st.markdown("## 📝 Sign up")
         
-        new_username = st.text_input("New user")
-        new_password = st.text_input("New password", type = "password")
+        new_username = st.text_input("New user", placeholder = "")
+        new_password = st.text_input("New password", type = "password", placeholder = "")
         
         if st.button("Sign up", use_container_width = True):
             if new_username.strip() == "" or new_password.strip() == "":

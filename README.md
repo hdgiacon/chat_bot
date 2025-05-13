@@ -107,16 +107,6 @@ For this project, the following tools were needed:
 
 The project setup uses **Ubuntu** as the operating system.
 
-### Virtual Environment
-
-Creating the Python virtual environment - *venv* from the requirements.txt file. Run the following commands in the **project root**:
-
-        python3 -m venv venv
-
-        source ./venv/bin/activate
-
-        pip install -r requirements.txt
-
 ### PostGreSQL
 
 1. Install:
@@ -170,6 +160,18 @@ Create a .env file in the root of the project and add the environment variables 
 * `DB_PORT`: port used by the database to perform the connection.
 
 * `GOOGLE_API_KEY`: API KEY generated in [Google AI Studio](https://aistudio.google.com/prompts/new_chat).
+
+### Virtual Environment
+
+Creating the Python virtual environment - *venv* from the requirements.txt file. Run the following commands in the **project root**:
+
+        python3 -m venv venv
+
+        source ./venv/bin/activate
+
+        pip install -r requirements.txt
+
+[//]: <> (TODO: falta rodar o script de criar o super usuario no banco postgre e cria o super usuario no django)
 
 ### Perform Migrations
 

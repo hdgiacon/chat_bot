@@ -24,6 +24,7 @@ redis
 # Natural Processing Language
 
 datasets
+torch --index-url https://download.pytorch.org/whl/cu128
 
 langchain 
 langchain-community 

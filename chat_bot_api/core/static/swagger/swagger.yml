@@ -25,14 +25,14 @@ paths:
             schema:
               type: object
               properties:
-                username:
+                email:
                   type: string
-                  example: "Username required for authentication. This field is required."
+                  example: "madruga@chaves.com"
                 password:
                   type: string
-                  example: "Password associated with the username. This field is required."
+                  example: "123456789Ma-"
               required:
-                - username
+                - email
                 - password
       responses:
         "200":
@@ -201,7 +201,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/User"
+              $ref: "#/components/schemas/UpdateUser"
       responses:
         "200":
           description: User updated sucessfully.
@@ -347,59 +347,34 @@ paths:
                   result_1:
                     type: object
                     properties:
-                      title:
-                        type: string
                       content:
-                        type: string
-                      url:
                         type: string
                       similarity:
                         type: int
-                      revoked:
-                        type: string
                   result_2:
                     type: object
                     properties:
-                      title:
-                        type: string
                       content:
-                        type: string
-                      url:
                         type: string
                       similarity:
                         type: int
-                      revoked:
-                        type: string
                   result_3:
                     type: object
                     properties:
-                      title:
-                        type: string
                       content:
-                        type: string
-                      url:
                         type: string
                       similarity:
                         type: int
-                      revoked:
-                        type: string
               example:
                 result_1:
-                  title: "Example Title 1"
                   content: "This is some example content for result 1."
-                  url: "https://example.com/1"
                   similarity: 0.5700613555953692
                 result_2:
-                  title: "Example Title 2"
                   content: "This is some example content for result 2."
-                  url: "https://example.com/2"
                   similarity: 0.33197371310011686
                 result_3:
-                  title: "Example Title 3"
                   content: "This is some example content for result 3."
-                  url: "https://example.com/3"
                   similarity: 0.2817058248812313
-                  revoed: "Revogado"
         '400':
           description: "Requisition error. No sentence provided."
           content:
@@ -432,30 +407,41 @@ components:
       properties:
         id:
           type: integer
-        username:
+        first_name:
+          type: string
+        last_name:
           type: string
         email:
           type: string
-        is_staff:
-          type: boolean
-        is_active:
-          type: boolean
 
     NewUser:
       type: object
       properties:
-        username:
+        first_name:
           type: string
-          example: "User name for register."
-        password:
+          example: "First name for register."
+        last_name:
           type: string
-          example: "User password for register."
+          example: "Last name for register."
         email:
           type: string
           example: "User email for register."
-        is_staff:
-          type: boolean
-          example: "if the user being registered is a staff, set it to true, if not, set it to false."
+        password:
+          type: string
+          example: "User password for register."
+
+    UpdateUser:
+      type: object
+      properties:
+        first_name:
+          type: string
+          example: "First name for update."
+        last_name:
+          type: string
+          example: "Last name for update."
+        email:
+          type: string
+          example: "User email for update."
 
   securitySchemes:
     BearerAuth:

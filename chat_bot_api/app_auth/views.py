@@ -31,13 +31,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         '''
 
         try:
-            username = request.data.get('username')
+            email = request.data.get('email')
 
-            if not username:
-                raise AuthenticationFailed('Username must not be empty')
+            if not email:
+                raise AuthenticationFailed('Email must not be empty')
 
-            if not CustomUser.objects.filter(username = username).exists():
-                raise AuthenticationFailed('No active account found with the given username')
+            if not CustomUser.objects.filter(email = email).exists():
+                raise AuthenticationFailed('No active account found with the given email')
             
             if not request.data.get('password'):
                 raise AuthenticationFailed('Password must not be empty')

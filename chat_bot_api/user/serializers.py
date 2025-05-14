@@ -3,16 +3,23 @@ from rest_framework import serializers
 from .models import CustomUser
 
 
-def validate_username(username: str) -> None:
+def validate_name_email(first_name: str, last_name: str, email: str) -> None:
     '''
-    Private function for validating `username`. If it's empty, raise `ValidationError` exception.
+    Private function for validating `username` and `email`. If one it's empty, raise `ValidationError` exception.
 
     Args:
-        username: username that will be validated.
+        username: username that will be validated;
+        email: email that will be validated.
     '''
 
-    if not username:
-        raise serializers.ValidationError('Username is required')
+    if not first_name:
+        raise serializers.ValidationError('First name is required')
+    
+    if not last_name:
+        raise serializers.ValidationError('Last name is required')
+    
+    if not email:
+        raise serializers.ValidationError('Email is required')
     
 
 def validate_password(password: str) -> None:
@@ -42,26 +49,16 @@ def validate_password(password: str) -> None:
         raise serializers.ValidationError('Password must contain at least one special character.')
     
 
-def validate_is_staff(is_staff: bool) -> None:
-    '''
-    Private function for validating `is_staff`. If has None value, raise `ValidationError` exception.
-
-    Args:
-        is_staff: boolean hole for validation.
-    '''
-    
-    if is_staff is None:
-        raise serializers.ValidationError('is_staff must be specified.')
-    
-
 
 class UserCreateSerializer(serializers.ModelSerializer):
     '''Class for user create validation and serialization. Extends `ModelSerializer`.'''
 
     class Meta:
         model = CustomUser
-
-        fields = ['username', 'password', 'is_staff']
+        
+        fields = ['first_name', 'last_name', 'email', 'password']
+        
+        extra_kwargs = {'password': {'write_only': True}}
 
     def validate(self, data: dict):
         '''
@@ -74,11 +71,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
             data if all validations were correct.
         '''
         
-        validate_username(data.get('username'))
+        validate_name_email(data.get('first_name'), data.get('last_name'), data.get('email'))
         
         validate_password(data.get('password'))
-        
-        validate_is_staff(data.get('is_staff'))
         
         return data
     
@@ -94,9 +89,10 @@ class UserCreateSerializer(serializers.ModelSerializer):
         '''
         
         user = CustomUser.objects.create_user(
-            username = validated_data['username'],
+            first_name = validated_data['first_name'],
+            last_name = validated_data['last_name'],
+            email = validated_data['email'],
             password = validated_data['password'],
-            is_staff = validated_data['is_staff'],
         )
         
         return user
@@ -107,7 +103,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'email', 'is_staff', 'is_active']
+        fields = ['id', 'first_name', 'last_name', 'email']
 
 
 class UserReadSerializer(serializers.ModelSerializer):
@@ -115,7 +111,7 @@ class UserReadSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['id', 'username', 'email', 'is_staff', 'is_active']
+        fields = ['id', 'first_name', 'last_name', 'email']
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -123,7 +119,12 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['username', 'is_staff']
+        fields = ['first_name', 'last_name', 'email']
+        extra_kwargs = {
+            'first_name': {'required': True, 'allow_blank': False},
+            'last_name': {'required': True, 'allow_blank': False},
+            'email': {'required': True, 'allow_blank': False},
+        }
 
     def validate(self, data: dict):
         '''
@@ -136,8 +137,6 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             data if all validations were correct.
         '''
         
-        validate_username(data.get('username'))
-        
-        validate_is_staff(data.get('is_staff'))
+        validate_name_email(data.get('first_name'), data.get('last_name'), data.get('email'))
         
         return data

@@ -1,0 +1,19 @@
+@layer utilities {
+    .scrollbar::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    .scrollbar::-webkit-scrollbar-track {
+        border-radius: 100px;
+        background: #100F10;
+    }
+
+    .scrollbar::-webkit-scrollbar-thumb {
+        border-radius: 100px;
+        background: #242424;
+    }
+
+    .scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #303030;
+    }
+}

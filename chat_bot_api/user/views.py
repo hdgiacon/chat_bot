@@ -179,7 +179,7 @@ class UserUpdateView(generics.UpdateAPIView):
         except Exception as e:
             LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
 
-            return Response({'error on user read: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error on user update: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
         
 
 class UserDeleteView(generics.DestroyAPIView):
@@ -216,4 +216,4 @@ class UserDeleteView(generics.DestroyAPIView):
         except Exception as e:
             LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
 
-            return Response({'error on user read: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error on user delete: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)

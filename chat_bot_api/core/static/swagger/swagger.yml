@@ -11,6 +11,10 @@ tags:
     description: Endpoints for ChatBot API CRUD.
   - name: Model
     description: Endpoints for ChatBot API model train and monitor.
+  - name: Search
+    description: Endpoints for ChatBot model answer.
+  - name: Chat
+    description: Endpoints for Chat management.
 
 paths:
   /app_auth/login/:
@@ -400,6 +404,120 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /app_model/chat/create/:
+    post:
+      security:
+        - BearerAuth: []
+      summary: Create a new chat with AI
+      operationId: createChat
+      tags:
+        - Chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewChat"
+      responses:
+        "201":
+          description: Chat created sucessfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Chat"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /app_model/chat/list/:
+    get:
+      security:
+        - BearerAuth: []
+      summary: List all chats
+      operationId: listChat
+      tags:
+        - Chat
+      responses:
+        "200":
+          description: Chat list fetched successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Chat"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /app_model/chat/{id}/delete/:
+    delete:
+      security:
+        - BearerAuth: []
+      summary: Delete a chat by ID
+      operationId: deleteChat
+      tags:
+        - Chat
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: "Chat id number on database."
+      responses:
+        "204":
+          description: Chat deleted sucessfully.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /app_model/message/{id}/create/:
+    post:
+      security:
+        - BearerAuth: []
+      summary: Create a new message on database
+      operationId: createMessage
+      tags:
+        - Chat
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: "Chat id number on database."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NewMessage"
+      responses:
+        "201":
+          description: Message created sucessfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   schemas:
     User:
@@ -442,6 +560,47 @@ components:
         email:
           type: string
           example: "User email for update."
+
+    Chat:
+      type: object
+      properties:
+        id:
+          type: integer
+        chat_name:
+          type: string
+        user_id:
+          type: integer
+        created_at:
+          type: string
+        
+    NewChat:
+      type: object
+      properties:
+        chat_name:
+          type: string
+          example: "Programming language query"
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        chat_id:
+          type: string
+        is_user:
+          type: boolean
+        created_at:
+          type: string
+
+    NewMessage:
+      type: object
+      properties:
+        text:
+          type: string
+          example: "Which is the best programming language?"
+        is_user:
+          type: boolean
+          example: True
 
   securitySchemes:
     BearerAuth:

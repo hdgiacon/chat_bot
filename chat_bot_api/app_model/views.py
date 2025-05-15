@@ -3,6 +3,8 @@ import traceback
 import shutil
 
 from django.conf import settings
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
@@ -17,7 +19,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from core.models import LogSystem
 from .tasks import set_database_and_train_data, get_response_from_vector_base
-from .models import TaskStatus
+from .models import TaskStatus, Chat, Message
 
 
 class SendDatabaseAndTrainModel(APIView):
@@ -154,3 +156,164 @@ class SearchInformationView(APIView):
             LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
 
             return Response({'error on process sentence: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class CreateChatView(APIView):
+    ''''''
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (JWTAuthentication,)
+
+    def post(self, request: Request) -> Response:
+        ''''''
+
+        try:
+            chat_name = request.data.get('chat_name')
+            
+            if not chat_name:
+                raise ValidationError("error: chat_name field is required.")
+
+            user = request.user
+            chat = Chat.objects.create(user = user, name = chat_name)
+
+            return Response(
+                {
+                    "message": "Chat created succesfully",
+                    "chat_id": chat.id,
+                    "name": chat.name,
+                    "created_at": chat.created_at
+                },
+                status = status.HTTP_201_CREATED
+            )
+
+        except AuthenticationFailed:
+            return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
+
+        except ValidationError as e:
+            error_message = next(iter(e.detail.values()))[0]
+
+            return Response({"error": error_message}, status = status.HTTP_404_NOT_FOUND)
+        
+        except ParseError as e:
+            return Response({'error': str(e)}, status = status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
+
+            return Response({'error': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ListChatView(APIView):
+    ''''''
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (JWTAuthentication,)
+
+    def get(self, request: Request) -> Response:
+        ''''''
+        
+        try:
+            
+            chats = Chat.objects.filter(user = request.user)
+            
+            chat_data = []
+            for chat in chats:
+                chat_data.append({
+                    'id': chat.id,
+                    'chat_name': chat.name,
+                    'user_id': chat.user.id,
+                    'created_at': chat.created_at,
+                })
+            
+            return Response(chat_data, status = status.HTTP_200_OK)
+        
+        except AuthenticationFailed:
+            return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
+        
+        except ParseError as e:
+            return Response({'error': str(e)}, status = status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
+
+            return Response({'error on chat list: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class DeleteChatView(APIView):
+    ''''''
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (JWTAuthentication,)
+
+    def delete(self, request: Request, pk: int) -> Response:
+        try:
+            chat = get_object_or_404(Chat, id = pk, user = request.user)
+            
+            chat_name = chat.name
+
+            chat.delete()
+
+            return Response({'message': f'{chat_name} deleted succesfully.'}, status = status.HTTP_204_NO_CONTENT)
+        
+        except AuthenticationFailed:
+            return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
+        
+        except Http404:
+            return Response({'error': 'Chat not found'}, status = status.HTTP_404_NOT_FOUND)
+        
+        except ParseError as e:
+            return Response({'error': str(e)}, status = status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
+
+            return Response({'error on chat delete: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+class CreateMessageView(APIView):
+    ''''''
+    
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (JWTAuthentication,)
+
+    def post(self, request: Request, chat_id: int) -> Response:
+        ''''''
+        
+        try:
+            text = request.data.get('text')
+            is_user = request.data.get('is_user')
+
+            if not text or not is_user:
+                raise ValidationError("error: text and is_user fields are required.")
+
+            chat = get_object_or_404(Chat, id = chat_id, user = request.user)
+
+            message = Message.objects.create(
+                chat = chat,
+                is_user = is_user,
+                text = text
+            )
+
+            return Response({
+                'id': message.id,
+                'chat_id': chat.id,
+                'is_user': message.is_user,
+                'text': message.text,
+                'created_at': message.created_at
+            }, status = status.HTTP_201_CREATED)
+        
+        except AuthenticationFailed:
+            return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
+
+        except ValidationError as e:
+            error_message = next(iter(e.detail.values()))[0]
+
+            return Response({"error": error_message}, status = status.HTTP_404_NOT_FOUND)
+        
+        except ParseError as e:
+            return Response({'error': str(e)}, status = status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
+
+            return Response({'error': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)

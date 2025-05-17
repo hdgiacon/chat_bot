@@ -1,12 +1,13 @@
 import traceback
 from django.http import Http404
 
-from rest_framework import generics, status
+from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.exceptions import AuthenticationFailed, ValidationError, ParseError
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.views import APIView
 
 from core.models import LogSystem
 
@@ -14,157 +15,158 @@ from .models import CustomUser
 from .serializers import UserCreateSerializer, UserListSerializer, UserReadSerializer, UserUpdateSerializer
 
 
-
-class UserCreateView(generics.CreateAPIView):
-    '''Class for creating a new user and saving on Postgre database. Extends `CreateAPIView`.'''
-    
-    queryset = CustomUser.objects.all()
-    serializer_class = UserCreateSerializer
+class UserCreateView(APIView):
+    '''Class for creating a new user and saving on PostgreSQL database.'''
     
     permission_classes = (AllowAny,)
     authentication_classes = ()
-
-    def create(self, request: Request) -> Response:
+    
+    def post(self, request: Request) -> Response:
         '''
-        Create a new CustomUser and verify if is validated.
+        Handle POST request to create a new CustomUser.
 
         Args:
-            request: object for getting client data.
+            request: object containing client data.
 
-        Return:
-            A Response object with success or failure message.
+        Returns:
+            A Response object with success or error message.
         '''
-
+        
         try:
-            serializer = self.get_serializer(data = request.data)
-
+            serializer = UserCreateSerializer(data = request.data)
             serializer.is_valid(raise_exception = True)
-
+            
             user = serializer.save()
 
-            headers = self.get_success_headers(serializer.data)
-            
+            headers = {'Location': f'/users/{user.id}/'}
+
             return Response({'message': 'User created successfully'}, status = status.HTTP_201_CREATED, headers = headers)
 
         except ValidationError as e:
             error_message = next(iter(e.detail.values()))[0]
             
             return Response({'error': error_message}, status = status.HTTP_400_BAD_REQUEST)
-        
+
         except ParseError as e:
             return Response({'error': str(e)}, status = status.HTTP_400_BAD_REQUEST)
-        
+
         except Exception as e:
             LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
             
-            return Response({'error on user create: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
+            return Response({'error on user create': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class UserListView(generics.ListAPIView):
-    '''Class for listing all CustomUser on database. Extends `ListAPIView`.'''
-    
-    queryset = CustomUser.objects.all()
-    serializer_class = UserListSerializer
+
+class UserListView(APIView):
+    '''Class for listing all CustomUser in the database.'''
     
     permission_classes = (IsAuthenticated,)
     authentication_classes = (JWTAuthentication,)
 
-    def list(self, request: Request, *args, **kwargs) -> Response:
+    def get(self, _: Request) -> Response:
         '''
-        List all CustomUser's as list and Verify if current user is authenticated.
+        Handle GET request to list all CustomUser instances.
 
         Args:
             request: object for getting client data.
 
-        Return:
-            A Response object with success or failure message.
+        Returns:
+            A Response object with serialized user data or error message.
         '''
 
         try:
-            return super().list(request, *args, **kwargs)
+            users = CustomUser.objects.all()
+            
+            serializer = UserListSerializer(users, many = True)
+            
+            return Response(serializer.data, status = status.HTTP_200_OK)
 
         except AuthenticationFailed:
             return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
-        
+
         except ParseError as e:
             return Response({'error': str(e)}, status = status.HTTP_400_BAD_REQUEST)
-        
+
         except Exception as e:
             LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
+            
+            return Response({'error on user list': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            return Response({'error on user list: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
 
-class UserReadView(generics.RetrieveAPIView):
-    '''Class for read a user data by it's id. Extends `RetrieveAPIView`.'''
+class UserReadView(APIView):
+    '''Class for reading a user's data by ID.'''
     
-    queryset = CustomUser.objects.all()
-    serializer_class = UserReadSerializer
-    
-    permission_classes = [IsAuthenticated,]
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (JWTAuthentication,)
 
-    def retrieve(self, request: Request, *args, **kwargs) -> Response:
+    def get(self, _: Request, pk: int) -> Response:
         '''
-        Read a user based on CustomUser id. Muste be authenticated.
+        Handle GET request to retrieve a CustomUser by primary key (ID).
 
         Args:
             request: object for getting client data.
+            pk: primary key of the user to retrieve.
 
-        Return:
-            A Response object with CustomUser data or `AuthenticationFailed`, `Http404` exceptions.
+        Returns:
+            A Response object with the serialized user data or an error message.
         '''
-
         try:
-            return super().retrieve(request, *args, **kwargs)
+            user = CustomUser.objects.filter(id = pk).first()
+            
+            if not user:
+                raise Http404
+
+            serializer = UserReadSerializer(user)
+            
+            return Response(serializer.data, status = status.HTTP_200_OK)
 
         except AuthenticationFailed:
             return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
-        
+
         except Http404:
             return Response({'error': 'User not found'}, status = status.HTTP_404_NOT_FOUND)
-        
+
         except ParseError as e:
             return Response({'error': str(e)}, status = status.HTTP_400_BAD_REQUEST)
-        
+
         except Exception as e:
             LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
+            
+            return Response({'error on user read': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)        
 
-            return Response({'error on user read: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
 
-class UserUpdateView(generics.UpdateAPIView):
-    '''Class for update a user data by its id. Extends `UpdateAPIView`.'''
-    
-    queryset = CustomUser.objects.all()
+class UserUpdateView(APIView):
+    '''Class for updating a user's data by ID.'''
 
-    serializer_class = UserUpdateSerializer
-    
-    permission_classes = [IsAuthenticated,]
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (JWTAuthentication,)
 
-    def update(self, request: Request, *args, **kwargs) -> Response:
+    def put(self, request: Request, pk: int) -> Response:
         '''
-        Update a user based on CustomUser id. Muste be authenticated and fields will be validated.
+        Update a user based on CustomUser id. Must be authenticated and fields will be validated.
 
         Args:
             request: object for getting client data.
+            pk: user ID.
 
         Return:
-            A Response object with CustomUser data or `AuthenticationFailed`, `Http404`, `ValidationError` exceptions.
+            A Response object with a success message or an appropriate error message.
         '''
-
         try:
-            instance = self.get_object()
+            user = CustomUser.objects.filter(id = pk).first()
+            
+            if not user:
+                raise Http404
 
-            serializer = self.get_serializer(instance, data = request.data)
+            serializer = UserUpdateSerializer(user, data = request.data)
+            
             serializer.is_valid(raise_exception = True)
-            
-            self.perform_update(serializer)
-            
+            serializer.save()
+
             return Response({'message': 'User updated successfully'}, status = status.HTTP_200_OK)
 
         except AuthenticationFailed:
             return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
-        
+
         except Http404:
             return Response({'error': 'User not found'}, status = status.HTTP_404_NOT_FOUND)
 
@@ -172,48 +174,53 @@ class UserUpdateView(generics.UpdateAPIView):
             error_message = next(iter(e.detail.values()))[0]
             
             return Response({'error': error_message}, status = status.HTTP_400_BAD_REQUEST)
-        
+
         except ParseError as e:
             return Response({'error': str(e)}, status = status.HTTP_400_BAD_REQUEST)
-        
+
         except Exception as e:
             LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
+            
+            return Response({'error on user update': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            return Response({'error on user update: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
 
-class UserDeleteView(generics.DestroyAPIView):
-    '''Class for deleting a user by its id. Extends `DestroyAPIView`.'''
-    
-    queryset = CustomUser.objects.all()
-    serializer_class = UserReadSerializer
-    
-    permission_classes = [IsAuthenticated,]
+class UserDeleteView(APIView):
+    '''Class for deleting a user by its id.'''
 
-    def destroy(self, request: Request, *args, **kwargs):
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (JWTAuthentication,)
+
+    def delete(self, _: Request, pk: int) -> Response:
         '''
-        Delete a user based on CustomUser id. Muste be authenticated.
+        Delete a user based on CustomUser id. Must be authenticated.
 
         Args:
             request: object for getting client data.
+            pk: user ID.
 
         Return:
-            A Response object with CustomUser data or `AuthenticationFailed`, `Http404` exceptions.
+            A Response object with success or error message.
         '''
-
         try:
-            return super().destroy(request, *args, **kwargs)
-        
+            user = CustomUser.objects.filter(id = pk).first()
+            
+            if not user:
+                raise Http404
+
+            user.delete()
+
+            return Response({'message': 'User deleted successfully'}, status = status.HTTP_204_NO_CONTENT)
+
         except AuthenticationFailed:
             return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
-        
+
         except Http404:
             return Response({'error': 'User not found'}, status = status.HTTP_404_NOT_FOUND)
-        
+
         except ParseError as e:
             return Response({'error': str(e)}, status = status.HTTP_400_BAD_REQUEST)
-        
+
         except Exception as e:
             LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
-
-            return Response({'error on user delete: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            return Response({'error on user delete': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)

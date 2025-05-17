@@ -5,6 +5,10 @@ import pandas as pd
 from decouple import config
 from bs4 import BeautifulSoup
 
+from rest_framework.request import Request
+from rest_framework.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
+
 import torch
 from datasets import load_dataset
 from langchain.docstore.document import Document as LangChainDocument
@@ -13,11 +17,13 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from .models import Document
+from .models import Document, Chat, Message
 
 
 
 class PrepareDataService:
+    ''''''
+    
     def __init__(self):
         # for non static methods
         pass
@@ -68,7 +74,8 @@ class PrepareDataService:
 
 
 
-class SetDocumentsOnDatabase:
+class SetDocumentsOnDatabaseService:
+    ''''''
 
     @staticmethod
     def set_data_on_postgre(download_dir_path: str) -> None:
@@ -96,7 +103,9 @@ class SetDocumentsOnDatabase:
 
 
 
-class GenerateEmbeddings:
+class GenerateEmbeddingsService:
+    ''''''
+    
     def __init__(self):
         # for non static methods
         pass
@@ -114,7 +123,8 @@ class GenerateEmbeddings:
 
         return documents
     
-    def _define_embedding_model(self) -> HuggingFaceEmbeddings:
+    @staticmethod
+    def define_embedding_model() -> HuggingFaceEmbeddings:
         ''''''
         
         embedding_model = HuggingFaceEmbeddings(
@@ -141,17 +151,19 @@ class GenerateEmbeddings:
 
         vector_save_path = os.path.join(vector_base_local_path, "processed", "faiss_index")
 
-        generate_embeddings = GenerateEmbeddings()
+        generate_embeddings = GenerateEmbeddingsService()
 
         documents = generate_embeddings._create_documents()
-        embedding_model = generate_embeddings._define_embedding_model()
+        embedding_model = GenerateEmbeddingsService.define_embedding_model()
         faiss_index = generate_embeddings._create_faiss_index(documents, embedding_model)
 
         faiss_index.save_local(vector_save_path)
 
 
 
-class GetResponseFromGemini:
+class GetResponseFromGeminiService:
+    ''''''
+    
     def __init__(self):
         # for non static methods
         pass
@@ -174,8 +186,7 @@ class GetResponseFromGemini:
     def _search_vector_base(self, vectorstore_path: str, query: str, top_k: int):
         ''''''
 
-        generate_embeddings = GenerateEmbeddings()
-        embedding_model = generate_embeddings._define_embedding_model()
+        embedding_model = GenerateEmbeddingsService.define_embedding_model()
 
         vectorstore = FAISS.load_local(
             vectorstore_path, 
@@ -205,7 +216,7 @@ class GetResponseFromGemini:
             Answer:
         """
 
-        get_response_from_gemini = GetResponseFromGemini()
+        get_response_from_gemini = GetResponseFromGeminiService()
 
         chain = get_response_from_gemini._define_gemini_model(
             prompt_template = prompt_template, 
@@ -239,7 +250,7 @@ class GetResponseFromGemini:
 
         faiss_path = os.path.join(data_base_path, "processed", "faiss_index")
 
-        get_response_from_gemini = GetResponseFromGemini()
+        get_response_from_gemini = GetResponseFromGeminiService()
 
         chain = get_response_from_gemini._define_gemini_model(prompt_template = prompt_template)
 
@@ -248,3 +259,91 @@ class GetResponseFromGemini:
         gemini_answer = chain.invoke({"context": context, "question": question})
 
         return vector_results, gemini_answer
+    
+
+
+class ChatService:
+    ''''''
+    
+    @staticmethod
+    def create(request: Request) -> dict:
+        ''''''
+
+        chat_name = request.data.get('chat_name')
+            
+        if not chat_name:
+            raise ValidationError("error: chat_name field is required.")
+
+        user = request.user
+        chat = Chat.objects.create(user = user, name = chat_name)
+
+        chat = {
+            "message": "Chat created succesfully",
+            "chat_id": chat.id,
+            "name": chat.name,
+            "created_at": chat.created_at
+        }
+
+        return chat
+    
+    @staticmethod
+    def list_chats(request: Request) -> list:
+        ''''''
+
+        chats = Chat.objects.filter(user = request.user)
+            
+        chat_data = []
+        
+        for chat in chats:
+            chat_data.append({
+                'id': chat.id,
+                'chat_name': chat.name,
+                'user_id': chat.user.id,
+                'created_at': chat.created_at,
+            })
+
+        return chat_data
+    
+    @staticmethod
+    def delete(request: Request, pk: int) -> str:
+        ''''''
+
+        chat = get_object_or_404(Chat, id = pk, user = request.user)
+            
+        chat_name = chat.name
+
+        chat.delete()
+
+        return chat_name
+
+
+class MessageService:
+    ''''''
+
+    @staticmethod
+    def create(request: Request, chat_id: int) -> dict:
+        ''''''
+
+        text = request.data.get('text')
+        is_user = request.data.get('is_user')
+
+        if not text or not is_user:
+            raise ValidationError("error: text and is_user fields are required.")
+
+        chat = get_object_or_404(Chat, id = chat_id, user = request.user)
+
+        message = Message.objects.create(
+            chat = chat,
+            is_user = is_user,
+            text = text
+        )
+
+        message = {
+            'id': message.id,
+            'chat_id': chat.id,
+            'is_user': message.is_user,
+            'text': message.text,
+            'created_at': message.created_at
+        }
+
+        return message

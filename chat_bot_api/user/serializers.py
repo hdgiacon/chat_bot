@@ -1,17 +1,14 @@
 import re
+
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError as DjangoValidationError
+
 from rest_framework import serializers
+
 from .models import CustomUser
 
 
-def validate_name_email(first_name: str, last_name: str, email: str) -> None:
-    '''
-    Private function for validating `username` and `email`. If one it's empty, raise `ValidationError` exception.
-
-    Args:
-        username: username that will be validated;
-        email: email that will be validated.
-    '''
-
+def _validate_name_email(first_name: str, last_name: str, email: str) -> None:
     if not first_name:
         raise serializers.ValidationError('First name is required')
     
@@ -21,8 +18,14 @@ def validate_name_email(first_name: str, last_name: str, email: str) -> None:
     if not email:
         raise serializers.ValidationError('Email is required')
     
+    try:
+        validate_email(email)
+    
+    except DjangoValidationError:
+        raise serializers.ValidationError('Invalid email format')
+    
 
-def validate_password(password: str) -> None:
+def _validate_password(password: str) -> None:
     '''
     Private function for validating `password`. If it's empty or less than 8 characters, raise `ValidationError` exception.
 
@@ -60,7 +63,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         
         extra_kwargs = {'password': {'write_only': True}}
 
-    def validate(self, data: dict):
+    def validate(self, data: dict) -> dict:
         '''
         Method for validating all request necessary field to create a CustomUser.
 
@@ -71,9 +74,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
             data if all validations were correct.
         '''
         
-        validate_name_email(data.get('first_name'), data.get('last_name'), data.get('email'))
+        _validate_name_email(data.get('first_name'), data.get('last_name'), data.get('email'))
+
+        if CustomUser.objects.filter(email = data.get('email')).exists():
+            raise serializers.ValidationError({'email': 'Email already registered.'})
         
-        validate_password(data.get('password'))
+        _validate_password(data.get('password'))
         
         return data
     
@@ -126,7 +132,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'email': {'required': True, 'allow_blank': False},
         }
 
-    def validate(self, data: dict):
+    def validate(self, data: dict) -> dict:
         '''
         Method for validating all request necessary field to opdate a CustomUser.
 
@@ -137,6 +143,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             data if all validations were correct.
         '''
         
-        validate_name_email(data.get('first_name'), data.get('last_name'), data.get('email'))
+        _validate_name_email(data.get('first_name'), data.get('last_name'), data.get('email'))
+
+        if CustomUser.objects.filter(email = data.get('email')).exists():
+            raise serializers.ValidationError({'email': 'Email already registered.'})
         
         return data

@@ -7,7 +7,7 @@ from rest_framework.exceptions import ValidationError
 from celery import shared_task, states
 
 from .models import TaskStatus
-from .services import PrepareDataService, SetDocumentsOnDatabase, GenerateEmbeddings, GetResponseFromGemini
+from .services import PrepareDataService, SetDocumentsOnDatabaseService, GenerateEmbeddingsService, GetResponseFromGeminiService
 from core.models import LogSystem
 
 
@@ -30,14 +30,14 @@ def set_database_and_train_data(download_dir: str):
             result = 'Setting data on Postgre database'
         )
 
-        SetDocumentsOnDatabase.set_data_on_postgre(download_dir)
+        SetDocumentsOnDatabaseService.set_data_on_postgre(download_dir)
 
         TaskStatus.objects.filter(task_id = task_id).update(
             status = states.PENDING,
             result = 'Creating embeddings and vector base'
         )
 
-        GenerateEmbeddings.create_vector_base(download_dir)
+        GenerateEmbeddingsService.create_vector_base(download_dir)
 
         TaskStatus.objects.filter(task_id = task_id).update(
             status = states.SUCCESS,
@@ -80,21 +80,21 @@ def set_database_and_train_data(download_dir: str):
 def get_response_from_vector_base(question: str, data_base_path: str) -> str:
     ''''''
 
-    LIMIAR_REJEICAO = 1.0833
+    REJECTION_THRESHOLD = 1.0833
 
     if not question:
         raise ValidationError('no sentence provided for search.')
     
     
-    verify_greetings = GetResponseFromGemini.classify_greeting_with_gemini(question)
+    verify_greetings = GetResponseFromGeminiService.classify_greeting_with_gemini(question)
 
     if verify_greetings != 'other':
         return verify_greetings
     
     
-    vector_results, gemini_answer = GetResponseFromGemini.get_answer_from_model(question, data_base_path)
+    vector_results, gemini_answer = GetResponseFromGeminiService.get_answer_from_model(question, data_base_path)
 
-    if not vector_results or vector_results[0][1] > LIMIAR_REJEICAO:
+    if not vector_results or vector_results[0][1] > REJECTION_THRESHOLD:
         return "Sorry, I couldn't find anything related to your question. This content may not be in my search database. Could you rephrase it?"
 
 

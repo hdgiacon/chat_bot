@@ -4,13 +4,11 @@ import shutil
 
 from django.conf import settings
 from django.http import Http404
-from django.shortcuts import get_object_or_404
 
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import AuthenticationFailed, ValidationError, ParseError
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.views import APIView
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import status
@@ -19,7 +17,8 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from core.models import LogSystem
 from .tasks import set_database_and_train_data, get_response_from_vector_base
-from .models import TaskStatus, Chat, Message
+from .models import TaskStatus
+from .services import ChatService, MessageService
 
 
 class SendDatabaseAndTrainModel(APIView):
@@ -28,15 +27,18 @@ class SendDatabaseAndTrainModel(APIView):
     permission_classes = (IsAuthenticated,)
     authentication_classes = (JWTAuthentication,)
     
-    def post(self, request: Request) -> Response:
+    def post(self, _: Request) -> Response:
         ''''''
 
         download_dir = settings.MEDIA_ROOT
         
         try:
-            task = set_database_and_train_data.delay(download_dir)
-
-            return Response({"message": "Training started successfully.", "task_id": task.id}, status = status.HTTP_201_CREATED)
+            if not os.path.exists(download_dir):
+                task = set_database_and_train_data.delay(download_dir)
+                
+                return Response({"message": "Training started successfully.", "task_id": task.id}, status = status.HTTP_201_CREATED)
+            
+            return Response({"message": "Model already trained"}, status = status.HTTP_200_OK)
 
         except AuthenticationFailed:
             return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
@@ -57,7 +59,6 @@ class SendDatabaseAndTrainModel(APIView):
 
             return Response({"error": str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-
 
 class TrainTaskStatusView(APIView):
     '''View to query the status of a specific task by task_id.'''
@@ -110,7 +111,6 @@ class TrainTaskStatusView(APIView):
 
             return Response({'error': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
         
-
 
 class SearchInformationView(APIView):
     '''View for sendind an question or sentence and getting an answer based on Sentece Similarity.'''
@@ -168,23 +168,9 @@ class CreateChatView(APIView):
         ''''''
 
         try:
-            chat_name = request.data.get('chat_name')
-            
-            if not chat_name:
-                raise ValidationError("error: chat_name field is required.")
+            chat = ChatService.create(request)
 
-            user = request.user
-            chat = Chat.objects.create(user = user, name = chat_name)
-
-            return Response(
-                {
-                    "message": "Chat created succesfully",
-                    "chat_id": chat.id,
-                    "name": chat.name,
-                    "created_at": chat.created_at
-                },
-                status = status.HTTP_201_CREATED
-            )
+            return Response(chat, status = status.HTTP_201_CREATED)
 
         except AuthenticationFailed:
             return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
@@ -213,17 +199,7 @@ class ListChatView(APIView):
         ''''''
         
         try:
-            
-            chats = Chat.objects.filter(user = request.user)
-            
-            chat_data = []
-            for chat in chats:
-                chat_data.append({
-                    'id': chat.id,
-                    'chat_name': chat.name,
-                    'user_id': chat.user.id,
-                    'created_at': chat.created_at,
-                })
+            chat_data = ChatService.list_chats(request)
             
             return Response(chat_data, status = status.HTTP_200_OK)
         
@@ -246,12 +222,10 @@ class DeleteChatView(APIView):
     authentication_classes = (JWTAuthentication,)
 
     def delete(self, request: Request, pk: int) -> Response:
+        ''''''
+        
         try:
-            chat = get_object_or_404(Chat, id = pk, user = request.user)
-            
-            chat_name = chat.name
-
-            chat.delete()
+            chat_name = ChatService.delete(request, pk)
 
             return Response({'message': f'{chat_name} deleted succesfully.'}, status = status.HTTP_204_NO_CONTENT)
         
@@ -280,27 +254,9 @@ class CreateMessageView(APIView):
         ''''''
         
         try:
-            text = request.data.get('text')
-            is_user = request.data.get('is_user')
+            message = MessageService.create(request, chat_id)
 
-            if not text or not is_user:
-                raise ValidationError("error: text and is_user fields are required.")
-
-            chat = get_object_or_404(Chat, id = chat_id, user = request.user)
-
-            message = Message.objects.create(
-                chat = chat,
-                is_user = is_user,
-                text = text
-            )
-
-            return Response({
-                'id': message.id,
-                'chat_id': chat.id,
-                'is_user': message.is_user,
-                'text': message.text,
-                'created_at': message.created_at
-            }, status = status.HTTP_201_CREATED)
+            return Response(message, status = status.HTTP_201_CREATED)
         
         except AuthenticationFailed:
             return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)

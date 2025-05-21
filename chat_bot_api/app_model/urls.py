@@ -1,6 +1,8 @@
 from django.urls import path
 from .views import SendDatabaseAndTrainModel, TrainTaskStatusView, SearchInformationView, CreateChatView, ListChatView, DeleteChatView, CreateMessageView
 
+app_name = 'app_model'
+
 urlpatterns = [
     path('train/model/', SendDatabaseAndTrainModel.as_view(), name = 'send-database'),
     path('monitor/training/', TrainTaskStatusView.as_view(), name = 'task-status'),

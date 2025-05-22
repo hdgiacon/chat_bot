@@ -1,38 +1,23 @@
-'use client'
+"use client"
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import MainContainer from "@/components/main-container";
-import { login } from "@/services/auth";
-import { trainModel } from '@/services/model';
+import { sign_up } from "@/services/sign_up";
 
-export default function LoginPage() {
+export default function SignUpPage() {
     const router = useRouter();
 
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
-    const handleLogin = async () => {
-        await login(email, password);
+    const handleSignUp = async () => {
+        await sign_up(firstName, lastName, email, password);
 
-        const must_train_model = await trainModel();
-
-        if (must_train_model) {
-            router.push('/set-database');
-
-        }
-
-        else {
-            router.push('/chat');
-        }
-
-    };
-
-    const handleSignUp = (e: React.MouseEvent<HTMLAnchorElement>) => {
-        e.preventDefault();
-
-        router.push('/sign-up');
-    };
+        router.back()
+    }
 
     return (
         <MainContainer>
@@ -47,11 +32,25 @@ export default function LoginPage() {
                 </div>
 
                 <div className="flex w-full">
-
+                    {/* Coluna da esquerda */}
                     <div className="w-1/2 flex flex-col items-center justify-center p-8">
-                        <h2 className="text-3xl font-semibold text-purple-600 mb-6">Sign in</h2>
+                        <h2 className="text-3xl font-semibold text-purple-600 mb-6">Sign Up</h2>
 
                         <div className="w-full max-w-md space-y-4">
+                            <input
+                                type="text"
+                                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                placeholder="First name"
+                                onChange={(e) => setFirstName(e.target.value)}
+                            />
+
+                            <input
+                                type="text"
+                                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                placeholder="Last name"
+                                onChange={(e) => setLastName(e.target.value)}
+                            />
+
                             <input
                                 type="text"
                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -60,7 +59,7 @@ export default function LoginPage() {
                             />
 
                             <input
-                                type="password"
+                                type="text"
                                 className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 placeholder="Password"
                                 onChange={(e) => setPassword(e.target.value)}
@@ -68,21 +67,14 @@ export default function LoginPage() {
 
                             <div className="h-4" />
 
-                            <button className="w-full py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700" onClick={handleLogin}>
-                                Login
+                            <button className="w-full py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700" onClick={handleSignUp}>
+                                Create account
                             </button>
 
-                            <div className="text-center mt-4">
-                                <p className="text-gray-600">
-                                    Don't have an account?{' '}
-                                    <a href="#" onClick={handleSignUp} className="text-purple-600 hover:underline">
-                                        Sign up here
-                                    </a>
-                                </p>
-                            </div>
                         </div>
                     </div>
 
+                    {/* Coluna da direita */}
                     <div className="w-1/2 relative">
                         <img
                             src="/chatbot_logo.png"

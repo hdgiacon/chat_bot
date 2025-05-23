@@ -20,7 +20,7 @@ export async function login(email: string, password: string) {
     return data;
 
   } catch (error) {
-    console.error("Erro no login: ", error);
+    console.error("Login error: ", error);
     
     throw error;
   }
@@ -53,7 +53,7 @@ export async function logout() {
     localStorage.removeItem("refresh_token");
 
   } catch (error) {
-    console.error("Erro no logout: ", error);
+    console.error("Logout error: ", error);
     
     throw error;
   }

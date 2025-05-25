@@ -347,3 +347,22 @@ class MessageService:
         }
 
         return message
+    
+    @staticmethod
+    def list_messages(chat_id: int) -> list:
+        ''''''
+
+        messages = Message.objects.filter(chat_id = chat_id)
+            
+        messages_data = []
+        
+        for message in messages:
+            messages_data.append({
+                'id': message.id,
+                'text': message.text,
+                'is_user': message.is_user,
+                'created_at': message.created_at,
+                'chat_id': message.chat_id,
+            })
+
+        return messages_data

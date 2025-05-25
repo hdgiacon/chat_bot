@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import SendDatabaseAndTrainModel, TrainTaskStatusView, SearchInformationView, CreateChatView, ListChatView, DeleteChatView, CreateMessageView
+from .views import SendDatabaseAndTrainModel, TrainTaskStatusView, SearchInformationView, CreateChatView, ListChatView, DeleteChatView, CreateMessageView, ListMessagesView
 
 app_name = 'app_model'
 
@@ -11,4 +11,5 @@ urlpatterns = [
     path('chat/list/', ListChatView.as_view(), name = 'list-chat'),
     path('chat/<int:pk>/delete/', DeleteChatView.as_view(), name = 'delete-chat'),
     path('message/<int:chat_id>/create/', CreateMessageView.as_view(), name = 'message-create'),
+    path('message/<int:chat_id>/list/', ListMessagesView.as_view(), name = 'message-list'),
 ]

@@ -16,8 +16,8 @@ from rest_framework import status
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from core.models import LogSystem
-from .tasks import set_database_and_train_data, get_response_from_vector_base
 from .models import TaskStatus
+from .tasks import set_database_and_train_data, get_response_from_vector_base
 from .services import ChatService, MessageService
 
 
@@ -273,3 +273,29 @@ class CreateMessageView(APIView):
             LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
 
             return Response({'error': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ListMessagesView(APIView):
+    ''''''
+
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (JWTAuthentication,)
+
+    def get(self, _: Request, chat_id: int) -> Response:
+        ''''''
+
+        try:
+            message_data = MessageService.list_messages(chat_id)
+
+            return Response(message_data, status = status.HTTP_200_OK)
+        
+        except AuthenticationFailed:
+            return Response({'error': 'Authentication failed.'}, status = status.HTTP_401_UNAUTHORIZED)
+        
+        except ParseError as e:
+            return Response({'error': str(e)}, status = status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
+
+            return Response({'error on chat list: ': str(e)}, status = status.HTTP_500_INTERNAL_SERVER_ERROR)

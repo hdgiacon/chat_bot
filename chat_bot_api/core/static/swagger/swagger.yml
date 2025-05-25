@@ -518,6 +518,37 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /app_model/message/{id}/list/:
+    get:
+      security:
+        - BearerAuth: []
+      summary: List all messages of a chat
+      operationId: listMessage
+      tags:
+        - Chat
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: "Chat id number on database"
+      responses:
+        "200":
+          description: Message list fetched successfully.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   schemas:
     User:
@@ -589,6 +620,8 @@ components:
           type: string
         is_user:
           type: boolean
+        text:
+          type: string
         created_at:
           type: string
 

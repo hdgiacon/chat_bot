@@ -200,3 +200,46 @@ export function groupChatsByDate(chats: Chat[]) {
 
     return grouped;
 }
+
+
+export type Message = {
+  id: number;
+  text: string;
+  is_user: boolean;
+  created_at: string;
+  chat_id: number;
+};
+
+
+export async function getMessages(chat_id: number): Promise<Message[]>{
+    const access_token = localStorage.getItem("access_token");
+
+    if (!access_token) {
+        throw new Error("Token not found in localStorage");
+    }
+
+    if (chat_id == undefined) {
+        throw new Error("Chat id must not be null");
+    }
+
+    try{
+        const response = await fetch(`http://localhost:8000/app_model/message/${chat_id}/list/`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${access_token}`,
+            },
+        });
+
+        if (!response.ok) throw new Error("Delete chat failed");
+
+        const data = await response.json();
+
+        return data
+    
+    } catch (error) {
+        console.error("Error deleting chat: ", error);
+        
+        throw error;
+    }
+}

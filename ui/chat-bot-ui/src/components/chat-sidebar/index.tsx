@@ -7,7 +7,7 @@ import { logout } from '@/services/auth';
 import { Chat, getAllChats, createChat, deleteChat, groupChatsByDate } from '@/services/model';
 import '../../styles/globals.css';
 
-export default function Sidebar() {
+export default function Sidebar({ onSelectChat, selectedChatId, }: { onSelectChat: (chatId: number) => void; selectedChatId: number | null; }) {
     const router = useRouter();
 
     const [chats, setChats] = useState<Chat[]>([]);
@@ -44,14 +44,12 @@ export default function Sidebar() {
 
     const handleCreateChat = async () => {
         try {
-            await createChat(newChatName.trim());
-
+            const chat = await createChat(newChatName.trim());
             const updatedChats = await getAllChats();
-
             setChats(updatedChats);
             setIsModalOpen(false);
             setNewChatName('');
-
+            onSelectChat(chat.id); // ✅ mantém seleção
         } catch (error) {
             console.error("Error creating chat:", error);
         }
@@ -59,7 +57,6 @@ export default function Sidebar() {
 
     const handleLogout = async () => {
         await logout();
-
         router.push('/login');
     };
 
@@ -112,11 +109,8 @@ export default function Sidebar() {
                 </div>
             )}
 
-
             <div className="w-64 h-screen bg-[#100F10] border-r flex flex-col py-4 px-4">
-
                 <div className="flex-1 overflow-y-auto px-4 pr-5 scrollbar">
-
                     <div className="mb-4">
                         <button
                             onClick={() => setIsModalOpen(true)}
@@ -125,7 +119,6 @@ export default function Sidebar() {
                             <img src="/chatbot_logo.png" alt="New Chat" className="w-10 h-10" />
                             New Chat
                         </button>
-
                     </div>
 
                     <div className="h-4" />
@@ -142,13 +135,16 @@ export default function Sidebar() {
                                     {groupChats.map((chat) => (
                                         <div
                                             key={chat.id}
-                                            className="py-4 px-4 bg-[#242424] rounded-xl hover:bg-[#303030] cursor-pointer mb-4 flex justify-between items-center"
+                                            className={`py-4 px-4 rounded-xl cursor-pointer mb-4 flex justify-between items-center transition-all ${selectedChatId === chat.id
+                                                ? "border-l-4 border-purple-500 bg-[#2f2f2f]" // ✅ Destaque no chat selecionado
+                                                : "bg-[#242424] hover:bg-[#303030]"
+                                                }`}
+                                            onClick={() => onSelectChat(chat.id)} // ✅ mantém clique
                                         >
-                                            <span>{chat.chat_name}</span>
+                                            <span className="text-white truncate">{chat.chat_name}</span>
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-
                                                     handleDeleteChat(chat.id);
                                                 }}
                                                 className="text-red-500 hover:text-red-700"
@@ -185,6 +181,5 @@ export default function Sidebar() {
                 </div>
             </div>
         </>
-
     );
 }

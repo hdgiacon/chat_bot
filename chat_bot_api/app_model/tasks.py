@@ -77,7 +77,7 @@ def set_database_and_train_data(download_dir: str):
 
 
 
-def get_response_from_vector_base(question: str, data_base_path: str) -> str:
+def get_response_from_vector_base(question: str, data_base_path: str) -> dict:
     ''''''
 
     REJECTION_THRESHOLD = 1.0833
@@ -95,27 +95,22 @@ def get_response_from_vector_base(question: str, data_base_path: str) -> str:
     vector_results, gemini_answer = GetResponseFromGeminiService.get_answer_from_model(question, data_base_path)
 
     if not vector_results or vector_results[0][1] > REJECTION_THRESHOLD:
-        return "Sorry, I couldn't find anything related to your question. This content may not be in my search database. Could you rephrase it?"
-
+        return {
+            "response": "Sorry, I couldn't find anything related to your question. This content may not be in my search database. Could you rephrase it?",
+            "references": []
+        }
 
     formatted_results = [
         {
-            "result_number": i,
-            "content": doc.page_content,
-            "similarity": round(1 / (1 + score), 4)
+            "content": f"\n\n🔹 {i}) {doc.page_content}\n",
+            "similarity": f"\n📎 Similarity: {round(1 / (1 + score), 4)}\n"
         }
         for i, (doc, score) in enumerate(vector_results, 1)
     ]
 
-    response_string = ""
+    dict_response = {
+        "response": gemini_answer.content,
+        "references": formatted_results
+    }
 
-    response_string += "\n🤖 Gemini: "
-    response_string += gemini_answer.content
-    response_string += "--------------------------------------"
-    response_string += "🤖 I used these results as a reference:"
-
-    for i, result in enumerate(formatted_results, 1):
-        response_string += f"\n\n🔹 {i}) {result['content']}\n"
-        response_string += f"\n📎 Similarity: {result['similarity']:.4f}\n"
-
-    return response_string
+    return dict_response

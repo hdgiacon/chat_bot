@@ -64,7 +64,39 @@ export async function monitorTraining(): Promise<{ status: string; result: strin
 }
 
 
-// TODO: getAnswer
+export async function getAnswer(prompt: string) {
+    const access_token = localStorage.getItem("access_token");
+
+    if (!access_token) {
+        throw new Error("Token not found in localStorage");
+    }
+
+    if (prompt.trim() === "") {
+        throw new Error("Prompt sentence must not be null");
+    }
+
+    try{
+        const response = await fetch("http://localhost:8000/app_model/search/information/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${access_token}`,
+            },
+            body: JSON.stringify({ prompt }),
+        });
+
+        if (!response.ok) throw new Error("Get answer from model failed");
+
+        const data = await response.json();
+
+        return data
+    
+    } catch (error) {
+        console.error("Error in model answer: ", error);
+        
+        throw error;
+    }
+}
 
 
 export type Chat = {
@@ -231,14 +263,53 @@ export async function getMessages(chat_id: number): Promise<Message[]>{
             },
         });
 
-        if (!response.ok) throw new Error("Delete chat failed");
+        if (!response.ok) throw new Error("Get messages failed");
 
         const data = await response.json();
 
         return data
     
     } catch (error) {
-        console.error("Error deleting chat: ", error);
+        console.error("Error getting messages: ", error);
+        
+        throw error;
+    }
+}
+
+
+export async function createMessage(chat_id: number, text: string, is_user: boolean) {
+    const access_token = localStorage.getItem("access_token");
+
+    if (!access_token) {
+        throw new Error("Token not found in localStorage");
+    }
+
+    if (chat_id == undefined) {
+        throw new Error("Chat id must not be null");
+    }
+
+    console.log("text:", text, "is_user:", is_user);
+
+    // TODO: caso não haja texto, mandar como mensagem do bot que houve algum erro
+
+    try{
+        const response = await fetch(`http://localhost:8000/app_model/message/${chat_id}/create/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${access_token}`,
+            },
+            body: JSON.stringify({ text, is_user })
+        });
+
+        if (!response.ok) throw new Error("Create message failed");
+
+        const data = await response.json();
+
+        return data
+    
+    } catch (error) {
+        console.error("Error creating message: ", error);
         
         throw error;
     }

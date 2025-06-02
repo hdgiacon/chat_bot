@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import shutil
 import pandas as pd
 from decouple import config
@@ -318,48 +319,60 @@ class ChatService:
 
 
 class MessageService:
-    ''''''
-
     @staticmethod
     def create(request: Request, chat_id: int) -> dict:
-        ''''''
-
         text = request.data.get('text')
         is_user = request.data.get('is_user')
 
-        if not text or not is_user:
+        if text is None or is_user is None:
             raise ValidationError("error: text and is_user fields are required.")
 
-        chat = get_object_or_404(Chat, id = chat_id, user = request.user)
+        # Se `text` não for string, ou for dict, serialize para JSON string
+        if isinstance(text, dict):
+            text = json.dumps(text)  # Converte dict em string JSON válida
+        
+        # Se for string, tenta validar se é JSON; se não for, deixa como está
+        elif isinstance(text, str):
+            try:
+                # Tenta carregar como JSON para validar
+                parsed = json.loads(text)
+                # Se passar, reserializa para garantir padrão JSON válido
+                text = json.dumps(parsed)
+            except json.JSONDecodeError:
+                # Não é JSON válido, deixa como string normal
+                pass
+
+        chat = get_object_or_404(Chat, id=chat_id, user=request.user)
 
         message = Message.objects.create(
-            chat = chat,
-            is_user = is_user,
-            text = text
+            chat=chat,
+            is_user=is_user,
+            text=text
         )
 
-        message = {
+        return {
             'id': message.id,
             'chat_id': chat.id,
             'is_user': message.is_user,
             'text': message.text,
             'created_at': message.created_at
         }
-
-        return message
     
     @staticmethod
     def list_messages(chat_id: int) -> list:
-        ''''''
-
-        messages = Message.objects.filter(chat_id = chat_id)
-            
+        messages = Message.objects.filter(chat_id=chat_id)
         messages_data = []
-        
+
         for message in messages:
+            # Tenta converter o campo text de volta para dict/json, se possível
+            try:
+                text = json.loads(message.text)
+            except (json.JSONDecodeError, TypeError):
+                text = message.text  # deixa como está se não for JSON válido
+
             messages_data.append({
                 'id': message.id,
-                'text': message.text,
+                'text': text,
                 'is_user': message.is_user,
                 'created_at': message.created_at,
                 'chat_id': message.chat_id,

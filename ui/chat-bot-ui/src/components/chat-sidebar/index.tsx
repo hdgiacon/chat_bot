@@ -49,7 +49,7 @@ export default function Sidebar({ onSelectChat, selectedChatId, }: { onSelectCha
             setChats(updatedChats);
             setIsModalOpen(false);
             setNewChatName('');
-            onSelectChat(chat.id); // ✅ mantém seleção
+            onSelectChat(chat.id);
         } catch (error) {
             console.error("Error creating chat:", error);
         }

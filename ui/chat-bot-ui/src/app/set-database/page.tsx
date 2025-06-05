@@ -62,24 +62,24 @@ export default function SetDatabase() {
 
                 <div className="w-1/3 p-15 flex flex-col justify-center items-start space-y-2">
                     <h1 className="text-5xl font-semibold mb-6">
-                        <span className="text-white">Downloading</span>{' '}
-                        <span className="text-purple-600">dataset</span>
+                        <span className="text-[#FAFAFA]">Downloading</span>{' '}
+                        <span className="text-purple-900">dataset</span>
                     </h1>
 
-                    <h1 className="text-5xl font-semibold text-purple-600 mb-6">and</h1>
+                    <h1 className="text-5xl font-semibold text-purple-900 mb-6">and</h1>
 
                     <h1 className="text-5xl font-semibold mb-6">
-                        <span className="text-white">training</span>{' '}
-                        <span className="text-purple-600">model</span>
+                        <span className="text-[#FAFAFA]">training</span>{' '}
+                        <span className="text-purple-900">model</span>
                     </h1>
 
                     <div className="h-4" />
 
-                    <p className="text-white">
+                    <p className="text-[#FAFAFA]">
                         This may take a while. In the meantime, you can check which models are used on this project:{" "}
                         <a
                             href="https://ai.google.dev/gemini-api/docs/models?hl=pt-br#gemini-1.5-flash"
-                            className="text-purple-600 hover:underline"
+                            className="text-purple-900 hover:underline"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
@@ -88,7 +88,7 @@ export default function SetDatabase() {
                         and{" "}
                         <a
                             href="https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2"
-                            className="text-purple-600 hover:underline"
+                            className="text-purple-900 hover:underline"
                             target="_blank"
                             rel="noopener noreferrer"
                         >
@@ -115,12 +115,12 @@ export default function SetDatabase() {
                         ></div>
                     </div>
 
-                    <p className="text-white text-lg text-center flex items-center justify-center gap-2">
+                    <p className="text-[#FAFAFA] text-lg text-center flex items-center justify-center gap-2">
                         {statusMessage}
                         {statusMessage !== "Creating FAISS vector base success" ? (
                             <span className="animate-pulse">...</span>
                         ) : (
-                            <span className="text-purple-500">✔</span>
+                            <span className="text-purple-900">✔</span>
                         )}
                     </p>
 
@@ -128,7 +128,7 @@ export default function SetDatabase() {
 
                     {showButton && (
                         <button
-                            className="mt-6 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition duration-300"
+                            className="mt-6 px-6 py-3 bg-purple-900 text-[#FAFAFA] rounded-lg hover:bg-purple-950 transition duration-300"
                             onClick={handleChat}
                         >
                             Start chat

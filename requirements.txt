@@ -25,6 +25,7 @@ redis
 # Natural Processing Language
 
 datasets
+nltk
 torch --index-url https://download.pytorch.org/whl/cu128
 
 langchain 
@@ -34,9 +35,3 @@ langchain-google-genai
 
 faiss-cpu 
 sentence-transformers
-
-
-# Frontend
-
-streamlit
-streamlit-autorefresh

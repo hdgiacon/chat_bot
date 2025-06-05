@@ -156,19 +156,12 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
-  /user/{id}/:
+  /user/read/:
     get:
-      summary: Retrieve a user by ID
+      summary: Retrieve current user data
       operationId: getUser
       tags:
         - User
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-            example: "user id number on database."
       responses:
         "200":
           description: user by id returned successfully.
@@ -187,19 +180,12 @@ paths:
       security:
         - BearerAuth: []
 
-  /user/{id}/update/:
+  /user/update/:
     put:
-      summary: Update a user by ID
+      summary: Update current user data
       operationId: updateUser
       tags:
         - User
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-            example: "user id number on database."
       requestBody:
         required: true
         content:
@@ -226,19 +212,12 @@ paths:
       security:
         - BearerAuth: []
 
-  /user/{id}/delete/:
+  /user/delete/:
     delete:
-      summary: Delete a user by ID
+      summary: Delete current user
       operationId: deleteUser
       tags:
         - User
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-            example: "user id number on database."
       responses:
         "204":
           description: User deleted sucessfully.

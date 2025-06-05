@@ -314,3 +314,8 @@ export async function createMessage(chat_id: number, text: string, is_user: bool
         throw error;
     }
 }
+
+export type Reference = {
+    content: string;
+    similarity: number;
+};

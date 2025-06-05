@@ -102,8 +102,8 @@ def get_response_from_vector_base(question: str, data_base_path: str) -> dict:
 
     formatted_results = [
         {
-            "content": f"\n\n🔹 {i}) {doc.page_content}\n",
-            "similarity": f"\n📎 Similarity: {round(1 / (1 + score), 4)}\n"
+            "content": f"🔹 {i}) {doc.page_content}",
+            "similarity": round(1 / (1 + score), 4)
         }
         for i, (doc, score) in enumerate(vector_results, 1)
     ]

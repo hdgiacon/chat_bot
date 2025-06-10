@@ -5,11 +5,11 @@ from django.conf import settings
 class Document(models.Model):
     ''''''
 
-    title = models.CharField(max_length = 255)
-    body = models.TextField()
-    text = models.TextField()
-    tags = models.TextField()
-    label = models.BooleanField()
+    parent_index = models.PositiveIntegerField(db_index = True)
+    qid = models.PositiveIntegerField()
+    question = models.TextField()
+    metadata = models.CharField(max_length = 80)
+    consolidated_answers = models.TextField()
 
 
 class Chat(models.Model):

@@ -129,12 +129,10 @@ class SearchInformationView(APIView):
             A response object with Sentence SImilarity response.
         '''
 
-        data_base_path = settings.MEDIA_ROOT
-
         try:
             question = request.data.get('prompt', None)
 
-            model_response = get_response_from_vector_base(question, data_base_path)
+            model_response = get_response_from_vector_base(question)
 
             return Response(model_response, status = status.HTTP_200_OK)
         

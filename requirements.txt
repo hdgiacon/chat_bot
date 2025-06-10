@@ -1,5 +1,6 @@
 # Initial data processing
 
+numpy
 pandas
 
 
@@ -7,6 +8,8 @@ pandas
 
 python-decouple
 beautifulsoup4
+lxml
+tqdm
 
 
 # REST API and Backend
@@ -24,8 +27,6 @@ redis
 
 # Natural Processing Language
 
-datasets
-nltk
 torch --index-url https://download.pytorch.org/whl/cu128
 
 langchain 

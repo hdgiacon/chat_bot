@@ -167,7 +167,7 @@ export default function Sidebar({ onSelectChat, selectedChatId, }: { onSelectCha
                 </div>
             )}
 
-            <div className="w-64 h-screen bg-[#1B1B1B] border-r flex flex-col py-4 px-4">
+            <div className="w-64 h-screen bg-[#1B1B1B] border-[#1B1B1B] border-r flex flex-col py-4 px-4">
                 <div className="flex-1 overflow-y-auto px-4 pr-5 scrollbar">
                     <div className="mb-4">
                         <button
@@ -219,7 +219,7 @@ export default function Sidebar({ onSelectChat, selectedChatId, }: { onSelectCha
                     )}
                 </div>
 
-                <div className="p-4 border-t">
+                <div className="p-4 border-t border-[#1B1B1B]">
                     <div className="flex gap-2">
                         <button
                             className="w-full bg-red-700 text-[#FAFAFA] py-2 px-4 rounded hover:bg-red-800 transition"

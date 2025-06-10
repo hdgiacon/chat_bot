@@ -1,13 +1,14 @@
 import os
 import traceback
 import shutil
+import requests
 
 from django.db import IntegrityError
 from rest_framework.exceptions import ValidationError
 from celery import shared_task, states
 
 from .models import TaskStatus
-from .services import PrepareDataService, SetDocumentsOnDatabaseService, GenerateEmbeddingsService, GetResponseFromGeminiService
+from .services import FetchDataService, DataConsolidationService, CreateFaissTreeService, GetResponseFromGeminiService
 from core.models import LogSystem
 
 
@@ -23,25 +24,40 @@ def set_database_and_train_data(download_dir: str):
             defaults = {'status': states.PENDING, 'result': 'Downloading data from HuggingFace'}
         )
 
-        PrepareDataService.get_huggingface_data_and_save(download_dir)
+        fetch_data = FetchDataService(
+            "https://huggingface.co/api/datasets/tyson0420/stackexchange-overflow-fil-python/parquet/default/train",
+            "https://huggingface.co/api/datasets/tyson0420/stackexchange-overflow-fil-python/parquet/default/test"
+        )
+
+        full_df = fetch_data.fetch_data()
 
         TaskStatus.objects.filter(task_id = task_id).update(
             status = states.PENDING,
             result = 'Setting data on Postgre database'
         )
 
-        SetDocumentsOnDatabaseService.set_data_on_postgre(download_dir)
+        data_consolidation = DataConsolidationService(full_df)
+
+        data_consolidation.consolidate_data()
 
         TaskStatus.objects.filter(task_id = task_id).update(
             status = states.PENDING,
             result = 'Creating embeddings and vector base'
         )
 
-        GenerateEmbeddingsService.create_vector_base(download_dir)
+        create_faiss_index = CreateFaissTreeService('focused_database.pkl')
+
+        create_faiss_index.create_faiss_index()
 
         TaskStatus.objects.filter(task_id = task_id).update(
             status = states.SUCCESS,
             result = 'Creating FAISS vector base success'
+        )
+
+    except requests.HTTPError:
+        TaskStatus.objects.filter(task_id = task_id).update(
+            status = states.FAILURE,
+            result = str(e)
         )
 
 
@@ -53,8 +69,6 @@ def set_database_and_train_data(download_dir: str):
             status = states.FAILURE,
             result = str(e)
         )
-
-        raise e
 
     except IntegrityError as e:
         LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
@@ -77,40 +91,20 @@ def set_database_and_train_data(download_dir: str):
 
 
 
-def get_response_from_vector_base(question: str, data_base_path: str) -> dict:
+def get_response_from_vector_base(question: str) -> str:
     ''''''
-
-    REJECTION_THRESHOLD = 1.0833
 
     if not question:
         raise ValidationError('no sentence provided for search.')
     
-    
-    verify_greetings = GetResponseFromGeminiService.classify_greeting_with_gemini(question)
+    get_reponse_from_gemini = GetResponseFromGeminiService('faiss_index', 'focused_database.pkl')
+
+    verify_greetings = get_reponse_from_gemini.classify_greeting(question)
 
     if verify_greetings != 'other':
         return verify_greetings
     
+    response = get_reponse_from_gemini.get_answer(question)
+
+    return response
     
-    vector_results, gemini_answer = GetResponseFromGeminiService.get_answer_from_model(question, data_base_path)
-
-    if not vector_results or vector_results[0][1] > REJECTION_THRESHOLD:
-        return {
-            "response": "Sorry, I couldn't find anything related to your question. This content may not be in my search database. Could you rephrase it?",
-            "references": []
-        }
-
-    formatted_results = [
-        {
-            "content": f"🔹 {i}) {doc.page_content}",
-            "similarity": round(1 / (1 + score), 4)
-        }
-        for i, (doc, score) in enumerate(vector_results, 1)
-    ]
-
-    dict_response = {
-        "response": gemini_answer.content,
-        "references": formatted_results
-    }
-
-    return dict_response

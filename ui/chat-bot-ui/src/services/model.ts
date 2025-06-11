@@ -318,4 +318,5 @@ export async function createMessage(chat_id: number, text: string, is_user: bool
 export type Reference = {
     content: string;
     similarity: number;
+    metadata: string;
 };

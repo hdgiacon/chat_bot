@@ -207,7 +207,7 @@ The superuser is a special type of user that has full administrative permissions
 
         cd chat_bot_api/
 
-        celery -A chat_bot_api worker --loglevel=info
+        celery -A chat_bot_api worker --loglevel=debug --concurrency=4 --max-tasks-per-child=500
 
     asynchronous procedures will be shown here.
 

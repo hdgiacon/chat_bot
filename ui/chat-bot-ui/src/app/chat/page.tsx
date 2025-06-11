@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { FiSend } from "react-icons/fi";
+import ReactMarkdown from 'react-markdown';
 import MainContainer from "@/components/main-container";
 import Sidebar from "@/components/chat-sidebar";
 import { TypingEffect } from "@/components/typing-effect";
@@ -138,12 +139,16 @@ export default function ChatPage() {
 
                                         try {
                                             const parsed = typeof msg.text === "string" ? JSON.parse(msg.text) : msg.text;
-                                            if (parsed && typeof parsed === "object" && parsed.response) {
-                                                content = parsed.response;
-                                                references = parsed.references;
+
+                                            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].response) {
+                                                content = parsed[0].response;
+
+                                                references = parsed[0].references || [];
+
                                             } else {
                                                 content = msg.text;
                                             }
+
                                         } catch {
                                             content = msg.text;
                                         }
@@ -229,11 +234,11 @@ export default function ChatPage() {
                                     <p className="text-[#FAFAFA99] text-base text-center">
                                         This project uses as a database{" "}
                                         <a
-                                            href="https://huggingface.co/datasets/habedi/stack-exchange-dataset"
-                                            onClick={(e) => console.log("nada ainda")}
+                                            href="https://huggingface.co/datasets/tyson0420/stackexchange-overflow-fil-python"
+                                            onClick={(_) => console.log("nada ainda")}
                                             className="text-purple-700 hover:underline"
                                         >
-                                            habedi/stack-exchange-dataset
+                                            tyson0420/stackexchange-overflow-fil-python
                                         </a>
                                         .
                                     </p>
@@ -278,8 +283,8 @@ export default function ChatPage() {
 
                             <p className="text-[#FAFAFA99]">
                                 This project uses as a database{' '}
-                                <a href="https://huggingface.co/datasets/habedi/stack-exchange-dataset" onClick={(e) => console.log('nada ainda')} className="text-purple-700 hover:underline">
-                                    habedi/stack-exchange-dataset
+                                <a href="https://huggingface.co/datasets/tyson0420/stackexchange-overflow-fil-python" onClick={(e) => console.log('nada ainda')} className="text-purple-700 hover:underline">
+                                    tyson0420/stackexchange-overflow-fil-python
                                 </a>
                                 .
                             </p>
@@ -357,17 +362,60 @@ export default function ChatPage() {
 
                             <h2 className="text-xl font-semibold mb-4 text-[#FAFAFA]">References found</h2>
 
+                            <div className="h-4" />
+
                             <div className="space-y-4">
                                 {modalReferences.map((ref, idx) => (
                                     <div key={idx}>
-                                        <p className="text-sm text-[#FAFAFA] whitespace-pre-wrap">
-                                            {ref.content.trim()}
-                                        </p>
+                                        <div className="text-sm text-[#FAFAFA]">
+                                            <ReactMarkdown
+                                                components={{
+                                                    p: ({ children }) => <p className="mb-2">{children}</p>,
+                                                    h1: ({ children }) => <h1 className="text-xl font-bold mb-3">{children}</h1>,
+                                                    h2: ({ children }) => <h2 className="text-lg font-semibold mb-2">{children}</h2>,
+                                                    strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                                                    em: ({ children }) => <em className="italic">{children}</em>,
+                                                    code: ({ children }) => <code className="bg-gray-800 px-1 py-0.5 rounded text-xs">{children}</code>,
+                                                    pre: ({ children }) => <pre className="bg-gray-800 p-3 rounded-md overflow-x-auto mb-3 scrollbar">{children}</pre>,
+                                                    ul: ({ children }) => <ul className="list-disc ml-4 mb-2">{children}</ul>,
+                                                    ol: ({ children }) => <ol className="list-decimal ml-4 mb-2">{children}</ol>,
+                                                    li: ({ children }) => <li className="mb-1">{children}</li>,
+                                                    a: ({ children, href }) => <a href={href} className="text-blue-400 hover:underline">{children}</a>,
+                                                    hr: ({ ...props }) => <hr className="my-6 border-gray-600" {...props} />
+                                                }}
+                                            >
+                                                {ref.content}
+                                            </ReactMarkdown>
+                                        </div>
+
+                                        <div className="h-1" />
+
                                         <p className="text-purple-500 text-xs font-medium mt-2">
                                             Similarity:&nbsp;
-                                            <span className="text-xs text-[#FAFAFA] font-medium mt-2">{ref.similarity.toFixed(4)}</span>
+                                            <span className="text-xs text-[#FAFAFA] font-medium mt-2">{ref.similarity}</span>
                                             &nbsp;
                                         </p>
+
+                                        <p className=" text-xs text-[#FAFAFA] font-medium mt-2">
+                                            Reference link:&nbsp;
+                                            <a href={ref.metadata} className="text-purple-600 hover:underline">
+                                                {ref.metadata}
+                                            </a>
+                                            &nbsp;
+                                        </p>
+
+                                        {idx !== modalReferences.length - 1 ? (
+                                            <>
+                                                <div className="h-10" />
+
+                                                <p className="text-center text-purple-500">&lt;\ \&gt;</p>
+
+                                                <div className="h-4" />
+                                            </>
+
+                                        ) : (
+                                            <div className="h-4" />
+                                        )}
                                     </div>
                                 ))}
                             </div>

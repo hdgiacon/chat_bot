@@ -7,7 +7,6 @@ from io import BytesIO
 
 import numpy as np
 import pandas as pd
-from tqdm.auto import tqdm
 from decouple import config
 from bs4 import BeautifulSoup
 import torch
@@ -15,6 +14,7 @@ import torch
 from rest_framework.request import Request
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
+from celery import states
 
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.prompts import PromptTemplate
@@ -22,66 +22,97 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from .models import Document, Chat, Message
+from .models import Document, Chat, Message, TaskStatus
 
 
 class FetchDataService:
     ''''''
-
-    def __init__(self, train_data_url: str, test_data_url: str) -> object:
+    
+    def __init__(self, train_data_url: str, test_data_url: str, qids_per_batch: int = 20000) -> object:
         self._train_data_url = train_data_url
         self._test_data_url = test_data_url
+        self._qids_per_batch = qids_per_batch
+        self._full_df = None
 
     def _get_url_data_from_huggingface(self, url: str) -> list[str]:
         ''''''
-
+        
         response = requests.get(url)
         response.raise_for_status()
-
+        
         return response.json()
     
-    def fetch_data(self) -> pd.DataFrame:
+    def _ensure_data_loaded(self) -> None:
         ''''''
 
+        if self._full_df is not None:
+            return
+            
         urls = self._get_url_data_from_huggingface(self._train_data_url)
         test_urls = self._get_url_data_from_huggingface(self._test_data_url)
-
         urls.extend(test_urls)
 
         dfs = []
-
+        
         for url in urls:
             response = requests.get(url)
             response.raise_for_status()
             
             parquet_file = BytesIO(response.content)
-            
             df = pd.read_parquet(parquet_file)
             dfs.append(df)
 
-        full_df = pd.concat(dfs, ignore_index = True)
+        self._full_df = pd.concat(dfs, ignore_index = True)
+        self._full_df['metadata'] = self._full_df['metadata'].str[0]
 
-        full_df['metadata'] = full_df['metadata'].str[0]
+    def get_qid_batches(self) -> list[list[str]]:
+        ''''''
 
-        return full_df
+        self._ensure_data_loaded()
+        unique_qids = self._full_df['qid'].unique()
+        
+        batches = []
+        
+        for i in range(0, len(unique_qids), self._qids_per_batch):
+            batch = unique_qids[i:i + self._qids_per_batch].tolist()
+            batches.append(batch)
+        
+        return batches
+    
+    def fetch_data_by_qids(self, qid_batch: list[str]) -> pd.DataFrame:
+        ''''''
+
+        self._ensure_data_loaded()
+        
+        batch_df = self._full_df[self._full_df['qid'].isin(qid_batch)].copy()
+        
+        return batch_df
+    
+    def clear_cache(self) -> None:
+        ''''''
+
+        if self._full_df is not None:
+            del self._full_df
+            self._full_df = None
+            gc.collect()
 
 
 
 class DataConsolidationService:
     ''''''
 
-    def __init__(self, full_df: pd.DataFrame) -> object:
-        self._full_df = full_df
+    def __init__(self, batch_df: pd.DataFrame) -> object:
+        self._batch_df = batch_df
 
     def _join_texts(self, series):
         ''''''
-
+        
         return "\n\n---\n\n".join(series.dropna().astype(str).unique())
 
     def _group_question_answer(self) -> pd.DataFrame:
         ''''''
-
-        consolidated_df = self._full_df.groupby('qid').agg(
+        
+        consolidated_df = self._batch_df.groupby('qid').agg(
             question = ('question', 'first'),
             metadata = ('metadata', 'first'),
             response_j = ('response_j', self._join_texts),
@@ -95,7 +126,7 @@ class DataConsolidationService:
 
     def _classify_relevant_sentences(self, consolidated_df: pd.DataFrame) -> pd.DataFrame:
         ''''''
-
+        
         consolidated_df_processed = consolidated_df.copy()
 
         consolidated_df_processed['full_text_lower'] = (
@@ -122,24 +153,33 @@ class DataConsolidationService:
         )
 
         focused_df = consolidated_df[final_mask].copy()
-
         focused_df.drop(columns = ['full_text_lower', 'python_signal_count', 'is_other_lang', 'has_code_block'], inplace = True)
 
         return focused_df
 
-    def consolidate_data(self) -> None:
+    def consolidate_batch(self) -> int:
         ''''''
 
         consolidated_df = self._group_question_answer()
+        
+        del self._batch_df
+        gc.collect()
 
         consolidated_df_processed = self._classify_relevant_sentences(consolidated_df)
+        
+        del consolidated_df
+        gc.collect()
 
         focused_df = self._filter_by_flags(consolidated_df_processed)
+        
+        del consolidated_df_processed
+        gc.collect()
+
+        if focused_df.empty:
+            return 0
 
         focused_df.reset_index(inplace = True)
         focused_df = focused_df.rename(columns = {'index': 'parent_index'})
-
-        #focused_df.to_pickle("focused_database.pkl")
 
         documents = [
             Document(
@@ -153,16 +193,21 @@ class DataConsolidationService:
         ]
 
         Document.objects.bulk_create(documents)
+        
+        docs_count = len(documents)
+        
+        del focused_df, documents
+        gc.collect()
+        
+        return docs_count
 
 
 
 class CreateFaissTreeService:
     ''''''
 
-    def __init__(self) -> object:
-        queryset = Document.objects.values()
-
-        self._focused_df = pd.DataFrame.from_records(queryset)
+    def __init__(self, documents_batch_size: int = 5000) -> object:
+        self._documents_batch_size = documents_batch_size
 
     def _clean_text(self, text: str) -> str:
         ''''''
@@ -172,7 +217,6 @@ class CreateFaissTreeService:
         
         try:
             soup = BeautifulSoup(text, "lxml")
-            
             text = soup.get_text()
         
         except Exception:
@@ -187,7 +231,7 @@ class CreateFaissTreeService:
         
         return text
 
-    def _create_chunks(self) -> pd.DataFrame:
+    def _create_chunks_batch(self, documents_df: pd.DataFrame) -> pd.DataFrame:
         ''''''
 
         text_splitter = RecursiveCharacterTextSplitter(
@@ -197,63 +241,119 @@ class CreateFaissTreeService:
             length_function = len
         )
 
-        focused_df_processed = self._focused_df.copy()
+        documents_df['text_for_chunking'] = documents_df['question'] + "\n\nAnswers:\n" + documents_df['consolidated_answers']
+        documents_df['raw_chunks'] = documents_df['text_for_chunking'].apply(lambda text: text_splitter.split_text(text))
 
-        focused_df_processed['text_for_chunking'] = focused_df_processed['question'] + "\n\nAnswers:\n" + focused_df_processed['consolidated_answers']
+        chunks_df = documents_df[['parent_index', 'metadata', 'raw_chunks']].explode('raw_chunks')
+        chunks_df = chunks_df.rename(columns = {'raw_chunks': 'raw_text_chunk'})
+        chunks_df['cleaned_text_chunk'] = chunks_df['raw_text_chunk'].apply(self._clean_text)
+        chunks_df = chunks_df[chunks_df['cleaned_text_chunk'].str.strip().astype(bool)].reset_index(drop = True)
 
-        focused_df_processed['raw_chunks'] = focused_df_processed['text_for_chunking'].apply(lambda text: text_splitter.split_text(text))
+        return chunks_df
 
-        documents_df = focused_df_processed[['parent_index', 'metadata', 'raw_chunks']].explode('raw_chunks')
-        documents_df = documents_df.rename(columns = {'raw_chunks': 'raw_text_chunk'})
-
-        documents_df['cleaned_text_chunk'] = documents_df['raw_text_chunk'].apply(self._clean_text)
-
-        documents_df = documents_df[documents_df['cleaned_text_chunk'].str.strip().astype(bool)].reset_index(drop = True)
-
-        return documents_df
-    
-    def create_faiss_index(self, batch_size = 1024, faiss_save_path = 'faiss_index') -> None:
+    def _process_embeddings_batch(self, chunks_df: pd.DataFrame, embedding_model, batch_size: int = 512):
         ''''''
 
-        documents_df = self._create_chunks()
-
-        vectorstore = None
-        total_docs = len(documents_df)
-
-        embedding_model = HuggingFaceEmbeddings(
-            model_name = 'all-MiniLM-L6-v2',
-            model_kwargs = {"device": "cuda" if torch.cuda.is_available() else "cpu"}
-        )
-
-        for i in tqdm(range(0, total_docs, batch_size), desc = "Processando lotes"):
-            batch_df = documents_df.iloc[i:i + batch_size]
+        embeddings_data = []
+        total_chunks = len(chunks_df)
+        
+        for i in range(0, total_chunks, batch_size):
+            batch_chunks = chunks_df.iloc[i:i + batch_size]
             
-            texts_to_embed = batch_df['cleaned_text_chunk'].tolist()
-            
-            texts_to_store = batch_df['raw_text_chunk'].tolist()
-            
+            texts_to_embed = batch_chunks['cleaned_text_chunk'].tolist()
+            texts_to_store = batch_chunks['raw_text_chunk'].tolist()
             metadatas = [
-                {'parent_index': row.parent_index, 'metadata_link': row.metadata} 
-                for row in batch_df.itertuples(index = False)
+                {'parent_index': row.parent_index, 'metadata_link': row.metadata}
+                for row in batch_chunks.itertuples(index=False)
             ]
+            
+            if texts_to_embed:
+                embeddings = embedding_model.embed_documents(texts_to_embed)
+                
+                for text, embedding, metadata in zip(texts_to_store, embeddings, metadatas):
+                    embeddings_data.append((text, embedding, metadata))
+            
+            gc.collect()
+        
+        return embeddings_data
 
-            if not texts_to_embed:
+    def create_faiss_index(self, batch_size: int = 512, faiss_save_path: str = 'faiss_index', task_id: str = None) -> None:
+        ''''''
+        
+        embedding_model = HuggingFaceEmbeddings(
+            model_name='all-MiniLM-L6-v2',
+            model_kwargs={"device": "cuda" if torch.cuda.is_available() else "cpu"}
+        )
+        
+        total_documents = Document.objects.count()
+        if total_documents == 0:
+            raise ValueError("Nenhum documento encontrado no banco de dados")
+        
+        vectorstore = None
+        processed_docs = 0
+        
+        for offset in range(0, total_documents, self._documents_batch_size):
+            if task_id:
+                TaskStatus.objects.filter(task_id = task_id).update(
+                    status = states.PENDING,
+                    result = f'Processando embeddings: {processed_docs}/{total_documents} documentos'
+                )
+            
+            queryset = Document.objects.values().order_by('id')[offset:offset + self._documents_batch_size]
+            documents_df = pd.DataFrame.from_records(queryset)
+            
+            if documents_df.empty:
                 continue
             
-            embeddings = embedding_model.embed_documents(texts_to_embed)
-
+            chunks_df = self._create_chunks_batch(documents_df)
+            
+            del documents_df
+            gc.collect()
+            
+            if chunks_df.empty:
+                continue
+            
+            embeddings_data = self._process_embeddings_batch(chunks_df, embedding_model, batch_size)
+            
+            del chunks_df
+            gc.collect()
+            
+            if not embeddings_data:
+                continue
+            
+            texts_to_store = [item[0] for item in embeddings_data]
+            embeddings = [item[1] for item in embeddings_data]
+            metadatas = [item[2] for item in embeddings_data]
+            
             text_embedding_pairs = list(zip(texts_to_store, embeddings))
             
             if vectorstore is None:
-                vectorstore = FAISS.from_embeddings(text_embedding_pairs, embedding_model, metadatas=metadatas)
-            
+                vectorstore = FAISS.from_embeddings(text_embedding_pairs, embedding_model, metadatas = metadatas)
             else:
-                vectorstore.add_embeddings(text_embedding_pairs, metadatas=metadatas)
+                vectorstore.add_embeddings(text_embedding_pairs, metadatas = metadatas)
             
+            del embeddings_data, text_embedding_pairs, texts_to_store, embeddings, metadatas
             gc.collect()
-
+            
+            processed_docs += min(self._documents_batch_size, total_documents - processed_docs)
+            
+            if task_id:
+                TaskStatus.objects.filter(task_id = task_id).update(
+                    status = states.PENDING,
+                    result = f'Embeddings processados: {processed_docs}/{total_documents} documentos'
+                )
+        
         if vectorstore:
+            if task_id:
+                TaskStatus.objects.filter(task_id = task_id).update(
+                    status = states.PENDING,
+                    result = 'Salvando índice FAISS...'
+                )
+            
             vectorstore.save_local(faiss_save_path)
+            
+            del vectorstore, embedding_model
+            gc.collect()
         
         else:
             raise ValueError("O vectorstore não foi criado. Nenhum documento foi processado ou adicionado ao índice.")
@@ -373,7 +473,7 @@ class GetResponseFromGeminiService:
                 
                 references_list.append({
                     "content": original_doc_row['consolidated_answers'],
-                    "similarity_percentage": f"{np.exp(-l2_distance):.2%}", 
+                    "similarity": f"{np.exp(-l2_distance):.2%}", 
                     "metadata": original_doc_row['metadata']
                 })
 
@@ -486,10 +586,10 @@ class MessageService:
                 text = json.dumps(parsed)
             
             except json.JSONDecodeError:
-                # Não é JSON válido, deixa como string normal
+                # It is not valid JSON, leave it as a normal string
                 pass
 
-        chat = get_object_or_404(Chat, id=chat_id, user=request.user)
+        chat = get_object_or_404(Chat, id = chat_id, user = request.user)
 
         message = Message.objects.create(
             chat = chat,
@@ -509,7 +609,7 @@ class MessageService:
     def list_messages(chat_id: int) -> list:
         ''''''
         
-        messages = Message.objects.filter(chat_id=chat_id)
+        messages = Message.objects.filter(chat_id = chat_id)
         messages_data = []
 
         for message in messages:

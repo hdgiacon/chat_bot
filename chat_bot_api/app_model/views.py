@@ -30,11 +30,11 @@ class SendDatabaseAndTrainModel(APIView):
     def post(self, _: Request) -> Response:
         ''''''
 
-        download_dir = settings.MEDIA_ROOT
+        faiss_save_dir = os.path.join(settings.MEDIA_ROOT, 'faiss_index')
         
         try:
-            if not os.path.exists(download_dir):
-                task = set_database_and_train_data.delay(download_dir)
+            if not os.path.exists(faiss_save_dir):
+                task = set_database_and_train_data.delay(faiss_save_dir)
                 
                 return Response({"message": "Training started successfully.", "task_id": task.id}, status = status.HTTP_201_CREATED)
             
@@ -52,8 +52,8 @@ class SendDatabaseAndTrainModel(APIView):
             return Response({'error': 'Bad request'}, status = status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            if os.path.exists(download_dir):
-                shutil.rmtree(download_dir)
+            if os.path.exists(faiss_save_dir):
+                shutil.rmtree(faiss_save_dir)
 
             LogSystem.objects.create(error = str(e), stacktrace = traceback.format_exc())
 
@@ -129,10 +129,12 @@ class SearchInformationView(APIView):
             A response object with Sentence SImilarity response.
         '''
 
+        faiss_dir = os.path.join(settings.MEDIA_ROOT, 'faiss_index')
+
         try:
             question = request.data.get('prompt', None)
 
-            model_response = get_response_from_vector_base(question)
+            model_response = get_response_from_vector_base(question, faiss_dir)
 
             return Response(model_response, status = status.HTTP_200_OK)
         

@@ -136,8 +136,17 @@ export default function Sidebar({ onSelectChat, selectedChatId, }: { onSelectCha
     return (
         <>
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                    <div className="bg-[#1e1e1e] p-6 rounded-lg w-[90%] max-w-md shadow-lg">
+                <div
+                    className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md bg-black/10"
+                    onClick={() => {
+                        setIsModalOpen(false);
+                        setNewChatName('');
+                    }}
+                >
+                    <div
+                        className="bg-[#1e1e1e] p-6 rounded-lg w-[90%] max-w-md shadow-lg"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <h2 className="text-[#FAFAFA] text-xl mb-4">New chat</h2>
                         <input
                             type="text"
@@ -259,7 +268,7 @@ export default function Sidebar({ onSelectChat, selectedChatId, }: { onSelectCha
 
                             <p className="text-[#ff9100] text-lg font-medium">
                                 Update&nbsp;
-                                <span className="text-[#FAFAFA] font-medium">dados de usuário</span>
+                                <span className="text-[#FAFAFA] font-medium">my account</span>
                             </p>
 
                             <input
@@ -306,7 +315,7 @@ export default function Sidebar({ onSelectChat, selectedChatId, }: { onSelectCha
 
                             <p className="text-red-600 text-lg font-medium">
                                 Delete&nbsp;
-                                <span className="text-[#FAFAFA] font-medium">dados de usuário</span>
+                                <span className="text-[#FAFAFA] font-medium">my account</span>
                             </p>
 
                             <button
